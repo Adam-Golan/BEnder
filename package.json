@@ -1,0 +1,24 @@
+{
+  "name": "backend-boilerplate",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@types/express": "",
+    "@types/node": "",
+    "@types/cookie-parser": "",
+    "@types/cors": ""
+  },
+  "dependencies": {
+    "express": "",
+    "nodemon": "",
+    "ts-node": "",
+    "cookie-parser": "",
+    "cors": ""
+  },
+  "author": "",
+  "license": "ISC"
+}
