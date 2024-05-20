@@ -1,5 +1,5 @@
-import { MethodBase } from "../base";
+import { Neuron } from "../base";
 
-export class PATCH extends MethodBase {
+export class PATCH extends Neuron {
     routes = {};
 }

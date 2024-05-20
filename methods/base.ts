@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-export abstract class RouterBase {
+export abstract class Synapse {
     router: Router = Router();
 
     constructor() {
@@ -10,8 +10,8 @@ export abstract class RouterBase {
     protected abstract setRouter(): void;
 }
 
-export abstract class MethodBase extends RouterBase {
-    abstract routes: { [k: string]: typeof RouterBase };
+export abstract class Neuron extends Synapse {
+    abstract routes: { [k: string]: typeof Synapse };
 
     protected setRouter(): void {
         Object.entries(this.routes).forEach(([service, Router]) => this.router.use(`/${service}`, new (Router as any)().router));

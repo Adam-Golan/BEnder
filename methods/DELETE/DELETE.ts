@@ -1,5 +1,5 @@
-import { MethodBase } from "../base";
+import { Neuron } from "../base";
 
-export class DELETE extends MethodBase {
+export class DELETE extends Neuron {
     routes = {};
 }

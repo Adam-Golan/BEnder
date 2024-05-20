@@ -1,7 +1,7 @@
-import { RouterBase } from "../../base";
+import { Synapse } from "../../base";
 import { Request, Response } from 'express';
 
-export class POST_DB extends RouterBase {
+export class POST_DB extends Synapse {
     protected setRouter(): void {
         this.router.use(`/${this.baseRoute}/:action`, (req: Request, res: Response) => {
             let response, status;
