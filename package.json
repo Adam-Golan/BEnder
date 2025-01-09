@@ -8,17 +8,19 @@
     "postinstall": "node initiator.mjs"
   },
   "devDependencies": {
-    "@types/express": "",
-    "@types/node": "",
     "@types/cookie-parser": "",
-    "@types/cors": ""
+    "@types/cors": "",
+    "@types/express": "",
+    "@types/node": ""
   },
   "dependencies": {
-    "express": "",
-    "nodemon": "",
-    "ts-node": "",
     "cookie-parser": "",
-    "cors": ""
+    "cors": "",
+    "express": "",
+    "express-rate-limit": "",
+    "helmet": "",
+    "nodemon": "",
+    "ts-node": ""
   },
   "author": "",
   "license": "ISC"
