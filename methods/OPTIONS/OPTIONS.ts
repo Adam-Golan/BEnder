@@ -1,5 +1,5 @@
 import { Neuron } from "../base";
 
-export class DELETE extends Neuron {
+export class OPTIONS extends Neuron {
     dir = __dirname;
 }
