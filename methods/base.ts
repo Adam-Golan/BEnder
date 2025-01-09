@@ -1,11 +1,13 @@
 import { Router } from 'express';
-import { readFileSync, writeFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
 
 export abstract class Synapse {
-    router: Router = Router();
+    abstract dir: string;
+    readonly router: Router = Router();
 
     constructor() {
-        setTimeout(() => this.setRouter());
+        this.setRouter();
     }
 
     protected abstract setRouter(): void;
@@ -14,19 +16,43 @@ export abstract class Synapse {
         try {
             return { code: successCode, data: await fn() };
         } catch (err) {
-            const errors = await readFileSync('../logs/errors/errors.json', { encoding: 'utf8' });
-            const parsed: { timestamp: string, error: unknown }[] = JSON.parse(errors);
-            parsed.push({ timestamp: new Date().toLocaleString(), error: err });
-            await writeFileSync('../logs/errors/errors.json', JSON.stringify(parsed), { encoding: 'utf8' });
+            // Creating local error log path.
+            const path = join(this.dir, 'error_log.json');
+            // Writing error log.
+            const log = { timestamp: new Date().toLocaleString(), error: err };
+            // Reading error log.
+            const logs = existsSync(path) ? JSON.parse(readFileSync(path, { encoding: 'utf8' })) : [];
+            // Pushing error log.
+            logs.push(log);
+            // Writing error log.
+            writeFileSync(path, JSON.stringify(logs), { encoding: 'utf8' });
             return { code: 500, data: err };
         }
     }
 }
 
 export abstract class Neuron extends Synapse {
-    abstract routes: { [k: string]: typeof Synapse };
+    protected async setRouter(): Promise<void> {
+        // Scann local directory for sub directories.
+        for (const localDir of this.getContent(this.dir, 'dir')) {
+            // Scann sub directory for sub modules.
+            for (const subModule of this.getContent(join(this.dir, localDir), 'file')) {
+                try {
+                    // Import sub module.
+                    const module = await import(join(this.dir, localDir, subModule));
+                    // Create sub module and using its router.
+                    for (const key in module) this.router.use(`/${localDir}`, new module[key]().router);
+                } catch (err) {
+                    console.error(`Failed creating ${localDir}/${subModule}`);
+                    console.error(err);
+                }
+            }
+        }
+    }
 
-    protected setRouter(): void {
-        Object.entries(this.routes).forEach(([service, Router]) => this.router.use(`/${service}`, new (Router as any)().router));
+    private getContent(path: string, type: 'dir' | 'file'): string[] {
+        const content = readdirSync(path, { withFileTypes: true });
+        const checkType = type === 'dir' ? 'isDirectory' : 'isFile';
+        return content.filter(content => content[checkType]()).map(content => content.name);
     }
 }
