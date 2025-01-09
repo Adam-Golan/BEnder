@@ -1,12 +1,14 @@
 import { server } from './config/infrastructure';
 import keys from './config/keys';
-import { GET, DELETE, PATCH, POST, PUT } from './methods';
+import { DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT } from './methods';
 
 server
     .get('/**', new GET().router)
-    .post('/**', new POST().router)
     .put('/**', new PUT().router)
+    .head('/**', new HEAD().router)
+    .post('/**', new POST().router)
     .patch('/**', new PATCH().router)
-    .delete('/**', new DELETE().router);
+    .delete('/**', new DELETE().router)
+    .options('/**', new OPTIONS().router);
 
 server.listen(keys.env.port, () => console.log(`Server is running on port ${keys.env.port}`));
