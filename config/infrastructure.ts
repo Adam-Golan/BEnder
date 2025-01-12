@@ -1,4 +1,4 @@
-import express, { type Express, type Request, type Response, json, urlencoded } from "express";
+import express, { type Express, json, urlencoded } from "express";
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -16,8 +16,7 @@ server
     .use(json())
     .use(urlencoded({ extended: true }))
     .use(cookieParser())
-    .use(morgan('dev'))
-    .use((_: Request, res: Response) => res.status(404).json({ message: 'Route not found' }));
+    .use(morgan('dev'));
 
 if (appConfig.security.helmet) {
     server.use(helmet({
