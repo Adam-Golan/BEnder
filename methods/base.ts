@@ -30,7 +30,7 @@ export abstract class Synapse {
     ]);
 
     constructor() {
-        this.setRouter();
+        setTimeout(() => this.setRouter());
     }
 
     protected abstract setRouter(): void;
