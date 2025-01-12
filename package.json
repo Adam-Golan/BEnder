@@ -11,6 +11,7 @@
     "@types/cookie-parser": "",
     "@types/cors": "",
     "@types/express": "",
+    "@types/morgan": "",
     "@types/node": ""
   },
   "dependencies": {
@@ -19,6 +20,7 @@
     "express": "",
     "express-rate-limit": "",
     "helmet": "",
+    "morgan": "",
     "nodemon": "",
     "ts-node": ""
   },

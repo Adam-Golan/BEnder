@@ -1,6 +1,7 @@
-import express, { type Express, json } from "express";
+import express, { type Express, type Request, type Response, json, urlencoded } from "express";
 import cors from 'cors';
 import helmet from 'helmet';
+import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { join } from 'path';
 import cookieParser from 'cookie-parser';
@@ -13,7 +14,10 @@ export const publicDir = join(__dirname, '..', 'public');
 server
     .use(express.static(publicDir))
     .use(json())
+    .use(urlencoded({ extended: true }))
     .use(cookieParser())
+    .use(morgan('dev'))
+    .use((_: Request, res: Response) => res.status(404).json({ message: 'Route not found' }));
 
 if (appConfig.security.helmet) {
     server.use(helmet({
