@@ -1,10 +1,33 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 export abstract class Synapse {
     abstract dir: string;
     readonly router: Router = Router();
+
+    readonly errorMsgs = new Map<number, string>([
+      [400, 'Bad Request'],
+      [401, 'Unauthorized'],
+      [402, 'Payment Required'],
+      [403, 'Forbidden'],
+      [404, 'Not Found'],
+      [405, 'Method Not Allowed'],
+      [406, 'Not Acceptable'],
+      [408, 'Request Timeout'],
+      [409, 'Conflict'],
+      [412, 'Precondition Failed'],
+      [413, 'Request Entity Too Large'],
+      [414, 'Request URI Too Long'],
+      [415, 'Unsupported Media Type'],
+      [418, 'I\'m a teapot'],
+      [429, 'Too Many Requests'],
+      [500, 'Internal Server Error'],
+      [501, 'Not Implemented'],
+      [502, 'Bad Gateway'],
+      [503, 'Service Unavailable'],
+      [504, 'Gateway Timeout']
+    ]);
 
     constructor() {
         this.setRouter();
@@ -27,6 +50,17 @@ export abstract class Synapse {
             // Writing error log.
             writeFileSync(path, JSON.stringify(logs), { encoding: 'utf8' });
             return { code: 500, data: err };
+        }
+    }
+
+    protected responser(res: Response, code: number, payload: unknown): void {
+        if (code >= 400) {
+            res.status(code).json({
+                error: this.errorMsgs.get(code) ?? 'Unknown Error',
+                msg: payload
+            });
+        } else {
+            res.status(code).json({ data: payload });
         }
     }
 }
