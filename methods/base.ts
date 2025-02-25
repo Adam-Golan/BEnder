@@ -7,26 +7,26 @@ export abstract class Synapse {
     readonly router: Router = Router();
 
     readonly errorMsgs = new Map<number, string>([
-      [400, 'Bad Request'],
-      [401, 'Unauthorized'],
-      [402, 'Payment Required'],
-      [403, 'Forbidden'],
-      [404, 'Not Found'],
-      [405, 'Method Not Allowed'],
-      [406, 'Not Acceptable'],
-      [408, 'Request Timeout'],
-      [409, 'Conflict'],
-      [412, 'Precondition Failed'],
-      [413, 'Request Entity Too Large'],
-      [414, 'Request URI Too Long'],
-      [415, 'Unsupported Media Type'],
-      [418, 'I\'m a teapot'],
-      [429, 'Too Many Requests'],
-      [500, 'Internal Server Error'],
-      [501, 'Not Implemented'],
-      [502, 'Bad Gateway'],
-      [503, 'Service Unavailable'],
-      [504, 'Gateway Timeout']
+        [400, 'Bad Request'],
+        [401, 'Unauthorized'],
+        [402, 'Payment Required'],
+        [403, 'Forbidden'],
+        [404, 'Not Found'],
+        [405, 'Method Not Allowed'],
+        [406, 'Not Acceptable'],
+        [408, 'Request Timeout'],
+        [409, 'Conflict'],
+        [412, 'Precondition Failed'],
+        [413, 'Request Entity Too Large'],
+        [414, 'Request URI Too Long'],
+        [415, 'Unsupported Media Type'],
+        [418, 'I\'m a teapot'],
+        [429, 'Too Many Requests'],
+        [500, 'Internal Server Error'],
+        [501, 'Not Implemented'],
+        [502, 'Bad Gateway'],
+        [503, 'Service Unavailable'],
+        [504, 'Gateway Timeout']
     ]);
 
     constructor() {
@@ -69,8 +69,10 @@ export abstract class Neuron extends Synapse {
     protected async setRouter(): Promise<void> {
         // Scann local directory for sub directories.
         for (const localDir of this.getContent(this.dir, 'dir')) {
+            if (localDir[0] === '_') continue;
             // Scann sub directory for sub modules.
             for (const subModule of this.getContent(join(this.dir, localDir), 'file')) {
+                if (subModule[0] === '_') continue;
                 try {
                     // Import sub module.
                     const module = await import(join(this.dir, localDir, subModule));
