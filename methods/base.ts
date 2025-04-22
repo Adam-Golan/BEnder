@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 export abstract class Synapse {
-    dir: string = __dirname;
+    abstract dir: string;
     readonly router: Router = Router();
 
     readonly errorMsgs = new Map<number, string>([
@@ -40,7 +40,7 @@ export abstract class Synapse {
             return { code: successCode, data: await fn() };
         } catch (err) {
             // Creating local error log path.
-            const path = join(this.dir, 'error_log.json');
+            const path = join(this.dir, '_errors.json');
             // Writing error log.
             const log = { timestamp: new Date().toLocaleString(), error: err };
             // Reading error log.
