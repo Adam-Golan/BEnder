@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 export abstract class Synapse {
-    abstract dir: string;
+    dir: string = __dirname;
     readonly router: Router = Router();
 
     readonly errorMsgs = new Map<number, string>([
