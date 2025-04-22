@@ -11,6 +11,6 @@ server
     .patch('/**', new PATCH().router)
     .delete('/**', new DELETE().router)
     .options('/**', new OPTIONS().router)
-    .use((_: Request, res: Response) => res.status(404).json({ message: 'Route not found' }));
+    .use((_: Request, res: Response) => { res.status(404).json({ message: 'Route not found' }) });
 
 server.listen(keys.env.port, () => console.log(`Server is running on port ${keys.env.port}`));
