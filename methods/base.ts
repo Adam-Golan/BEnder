@@ -54,14 +54,12 @@ export abstract class Synapse {
     }
 
     protected responser(res: Response, code: number, payload: unknown): void {
-        if (code >= 400) {
-            res.status(code).json({
+        code >= 400
+            ? res.status(code).json({
                 error: this.errorMsgs.get(code) ?? 'Unknown Error',
-                msg: payload
-            });
-        } else {
-            res.status(code).json({ data: payload });
-        }
+                message: payload
+            })
+            : res.status(code).json(payload);
     }
 }
 
