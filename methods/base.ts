@@ -42,7 +42,7 @@ export abstract class Synapse {
             // Creating local error log path.
             const path = join(this.dir, '_errors.json');
             // Writing error log.
-            const log = { timestamp: new Date().toLocaleString(), error: err };
+            const log = { timestamp: new Date().toLocaleString(), error: `${err}` };
             // Reading error log.
             const logs = existsSync(path) ? JSON.parse(readFileSync(path, { encoding: 'utf8' })) : [];
             // Pushing error log.
