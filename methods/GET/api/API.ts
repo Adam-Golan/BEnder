@@ -12,7 +12,7 @@ export class GET_API extends Synapse {
                     status = 400;
                     response = { error: 'unknown request' };
             };
-            res.status(status).json(response);
+            this.responser(res, status, response);
         });
     }
 }
