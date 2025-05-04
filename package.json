@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "initiate": "git submodule update --init --recursive && git submodule foreach 'git checkout main' && npm install --recursive && git remote rm origin",
+    "initiate": "npm install --recursive && git remote rm origin",
     "server": "nodemon app.ts"
   },
   "devDependencies": {

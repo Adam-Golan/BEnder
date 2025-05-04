@@ -35,12 +35,12 @@ export abstract class Synapse {
 
     protected abstract setRouter(): void;
 
-    protected async tryer<T>(fn: () => T, successCode: number = 200): Promise<{ code: number, data: T | unknown }> {
+    protected async tryer<T>(fn: () => Promise<T>, successCode: number = 200): Promise<{ code: number, data: T }> {
         try {
             return { code: successCode, data: await fn() };
-        } catch (err) {
+        } catch (err: any) {
             // Creating local error log path.
-            const path = join(this.dir, 'error_log.json');
+            const path = join(this.dir, '_errors.json');
             // Writing error log.
             const log = { timestamp: new Date().toLocaleString(), error: err };
             // Reading error log.
