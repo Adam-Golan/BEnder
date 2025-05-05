@@ -70,7 +70,7 @@ export abstract class Neuron extends Synapse {
             if (localDir[0] === '_') continue;
             // Scann sub directory for sub modules.
             for (const subModule of this.getContent(join(this.dir, localDir), 'file')) {
-                if (subModule[0] === '_') continue;
+                if (subModule[0] === '_' || subModule.includes('.d.')) continue;
                 try {
                     // Import sub module.
                     const module = await import(join(this.dir, localDir, subModule));
