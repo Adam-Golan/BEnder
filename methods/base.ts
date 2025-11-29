@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { readdirSync } from 'fs';
+import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 
 export abstract class Synapse {
@@ -30,7 +31,7 @@ export abstract class Synapse {
     ]);
 
     constructor() {
-        setTimeout(() => this.setRouter());
+        this.setRouter();
     }
 
     protected abstract setRouter(): void;
@@ -39,16 +40,18 @@ export abstract class Synapse {
         try {
             return { code: successCode, data: await fn() };
         } catch (err: any) {
-            // Creating local error log path.
+            // Async error logging - "fool proof" by design
             const path = join(this.dir, '_errors.json');
-            // Writing error log.
-            const log = { timestamp: new Date().toLocaleString(), error: `${err}` };
-            // Reading error log.
-            const logs = existsSync(path) ? JSON.parse(readFileSync(path, { encoding: 'utf8' })) : [];
-            // Pushing error log.
-            logs.push(log);
-            // Writing error log.
-            writeFileSync(path, JSON.stringify(logs), { encoding: 'utf8' });
+            const log = { timestamp: new Date().toLocaleString(), error: `${fn.name}: ${err}` };
+
+            readFile(path, { encoding: 'utf8' })
+                .then(data => JSON.parse(data))
+                .catch(() => [])
+                .then(logs => {
+                    logs.push(log);
+                    return writeFile(path, JSON.stringify(logs, null, 2), { encoding: 'utf8' });
+                });
+
             return { code: 500, data: err };
         }
     }

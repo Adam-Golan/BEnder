@@ -17,6 +17,7 @@
   "dependencies": {
     "cookie-parser": "",
     "cors": "",
+    "dotenv": "",
     "express": "",
     "express-rate-limit": "",
     "helmet": "",
