@@ -2,6 +2,9 @@ import { Router, Response } from 'express';
 import { readdirSync } from 'fs';
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
+import { Readable } from 'stream';
+
+export type ResponseType = 'json' | 'html' | 'text' | 'stream';
 
 export abstract class Synapse {
     abstract dir: string;
@@ -36,13 +39,16 @@ export abstract class Synapse {
 
     protected abstract setRouter(): void;
 
-    protected async tryer<T>(fn: () => Promise<T>, successCode: number = 200): Promise<{ code: number, data: T }> {
+    protected async tryer<T>(fn: () => Promise<T>, successCode: number = 200): Promise<{ code: number, data: T | string }> {
         try {
             return { code: successCode, data: await fn() };
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            const stack = err instanceof Error ? err.stack : undefined;
+
             // Async error logging - "fool proof" by design
             const path = join(this.dir, '_errors.json');
-            const log = { timestamp: new Date().toLocaleString(), error: `${fn.name}: ${err}` };
+            const log = { timestamp: new Date().toISOString(), error: `${fn.name}: ${message}`, stack };
 
             readFile(path, { encoding: 'utf8' })
                 .then(data => JSON.parse(data))
@@ -52,17 +58,27 @@ export abstract class Synapse {
                     return writeFile(path, JSON.stringify(logs, null, 2), { encoding: 'utf8' });
                 });
 
-            return { code: 500, data: err };
+            return { code: 500, data: message };
         }
     }
 
-    protected responser(res: Response, code: number, payload: unknown): void {
-        code >= 400
-            ? res.status(code).json({
-                error: this.errorMsgs.get(code) ?? 'Unknown Error',
-                message: payload
-            })
-            : res.status(code).json(payload);
+    protected responser(res: Response, code: number, payload: unknown, type: ResponseType = 'json'): void {
+        res.status(code);
+
+        if (code >= 400) {
+            res.json({ error: this.errorMsgs.get(code) ?? 'Unknown Error', message: payload });
+            return;
+        }
+
+        switch (type) {
+            case 'html': res.type('html').send(payload); break;
+            case 'text': res.type('text').send(payload); break;
+            case 'stream':
+                if (payload instanceof Readable) payload.pipe(res);
+                else res.json({ error: 'Invalid stream payload' });
+                break;
+            default: res.json(payload);
+        }
     }
 }
 
