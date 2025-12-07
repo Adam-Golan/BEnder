@@ -3,14 +3,22 @@ import { server } from './config/infrastructure';
 import keys from './config/keys';
 import { DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT } from './methods';
 
-server
-    .get(/.*/, new GET().router)
-    .put(/.*/, new PUT().router)
-    .head(/.*/, new HEAD().router)
-    .post(/.*/, new POST().router)
-    .patch(/.*/, new PATCH().router)
-    .delete(/.*/, new DELETE().router)
-    .options(/.*/, new OPTIONS().router)
-    .use((_: Request, res: Response) => { res.status(404).json({ message: 'Route not found' }) });
+(async () => {
+    const [get, put, head, post, patch, del, options] = [new GET(), new PUT(), new HEAD(), new POST(), new PATCH(), new DELETE(), new OPTIONS()];
 
-server.listen(keys.env.port, () => console.log(`Server is running on port ${keys.env.port}`));
+    // Await all route registrations - allSettled ensures partial failures don't crash startup
+    const results = await Promise.allSettled([get, put, head, post, patch, del, options].map(n => n.ready));
+    results.forEach((r, i) => r.status === 'rejected' && console.error(`[Neuron ${i}] Failed to initialize:`, r.reason));
+
+    server
+        .get(/.*/, get.router)
+        .put(/.*/, put.router)
+        .head(/.*/, head.router)
+        .post(/.*/, post.router)
+        .patch(/.*/, patch.router)
+        .delete(/.*/, del.router)
+        .options(/.*/, options.router)
+        .use((_: Request, res: Response) => { res.status(404).json({ message: 'Route not found' }) });
+
+    server.listen(keys.env.port, () => console.log(`Server is running on port ${keys.env.port}`));
+})();

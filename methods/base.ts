@@ -9,6 +9,7 @@ export type ResponseType = 'json' | 'html' | 'text' | 'stream';
 export abstract class Synapse {
     abstract dir: string;
     readonly router: Router = Router();
+    readonly ready: Promise<void> = Promise.resolve();
 
     readonly errorMsgs = new Map<number, string>([
         [400, 'Bad Request'],
@@ -34,10 +35,10 @@ export abstract class Synapse {
     ]);
 
     constructor() {
-        this.setRouter();
+        this.ready = this.setRouter();
     }
 
-    protected abstract setRouter(): void;
+    protected abstract setRouter(): Promise<void>;
 
     protected async tryer<T>(fn: () => Promise<T>, successCode: number = 200): Promise<{ code: number, data: T | string }> {
         try {
