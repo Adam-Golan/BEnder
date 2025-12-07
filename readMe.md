@@ -27,6 +27,18 @@ BEnder organizes routes using a **brain-inspired metaphor**:
 - **Neurons** 🧠 - Container classes that automatically discover and organize routes
 - **Synapses** ⚡ - Endpoint handlers that process HTTP requests
 
+### Reserved Prefixes
+
+Files and directories prefixed with `_` (underscore) are **ignored** by the route discovery system:
+
+| Pattern | Purpose |
+|---------|---------|
+| `_errors.json` | Auto-generated error logs from `tryer()` |
+| `_helpers.ts` | Private utilities not exposed as routes |
+| `_internal/` | Internal directories excluded from routing |
+
+This allows you to co-locate helper code and logs alongside your Synapses without them being treated as route modules.
+
 ### How Routing Works
 
 Routes are automatically constructed from the **file system structure**:
