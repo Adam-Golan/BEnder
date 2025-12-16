@@ -1,5 +1,7 @@
 import { Neuron } from "../base";
 
 export class DELETE extends Neuron {
-    dir = __dirname;
+    constructor() {
+        super(__dirname);
+    }
 }
