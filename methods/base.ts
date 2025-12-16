@@ -7,7 +7,6 @@ import { Readable } from 'stream';
 export type ResponseType = 'json' | 'html' | 'text' | 'stream';
 
 export abstract class Synapse {
-    abstract dir: string;
     readonly router: Router = Router();
     readonly ready: Promise<void> = Promise.resolve();
 
@@ -34,7 +33,7 @@ export abstract class Synapse {
         [504, 'Gateway Timeout']
     ]);
 
-    constructor() {
+    constructor(protected dir: string) {
         this.ready = this.setRouter();
     }
 
