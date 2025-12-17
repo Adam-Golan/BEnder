@@ -12,7 +12,8 @@
     "@types/cors": "",
     "@types/express": "",
     "@types/morgan": "",
-    "@types/node": ""
+    "@types/node": "",
+    "tsx": ""
   },
   "dependencies": {
     "cookie-parser": "",
