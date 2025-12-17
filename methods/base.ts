@@ -1,14 +1,13 @@
-import { Router, Response } from 'express';
-import { readdirSync } from 'fs';
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { Readable } from 'stream';
+import { framework } from '../config/infrastructure';
 
 export type ResponseType = 'json' | 'html' | 'text' | 'stream';
 
 export abstract class Synapse {
-    readonly router: Router = Router();
-    readonly ready: Promise<void> = Promise.resolve();
+    public router: any;
+    public ready: Promise<void>;
 
     readonly errorMsgs = new Map<number, string>([
         [400, 'Bad Request'],
@@ -34,7 +33,12 @@ export abstract class Synapse {
     ]);
 
     constructor(protected dir: string) {
-        this.ready = this.setRouter();
+        this.ready = this.init();
+    }
+
+    private async init() {
+        this.router = await framework.createRouter();
+        await this.setRouter();
     }
 
     protected abstract setRouter(): Promise<void>;
@@ -62,7 +66,7 @@ export abstract class Synapse {
         }
     }
 
-    protected responser(res: Response, code: number, payload: unknown, type: ResponseType = 'json'): void {
+    protected responser(res: any, code: number, payload: unknown, type: ResponseType = 'json'): void {
         res.status(code);
 
         if (code >= 400) {
@@ -94,7 +98,11 @@ export abstract class Neuron extends Synapse {
                     // Import sub module.
                     const module = await import(join(this.dir, localDir, subModule));
                     // Create sub module and using its router.
-                    for (const key in module) this.router.use(`/${localDir}`, new module[key]().router);
+                    for (const key in module) {
+                        const instance: Synapse = new module[key]();
+                        await instance.ready;
+                        this.router.use(`/${localDir}`, instance.router);
+                    }
                 } catch (err) {
                     console.error(`Failed creating ${localDir}/${subModule}`);
                     console.error(err);
@@ -104,8 +112,9 @@ export abstract class Neuron extends Synapse {
     }
 
     private getContent(path: string, type: 'dir' | 'file'): string[] {
+        const readdirSync = require('fs').readdirSync;
         const content = readdirSync(path, { withFileTypes: true });
         const checkType = type === 'dir' ? 'isDirectory' : 'isFile';
-        return content.filter(content => content[checkType]()).map(content => content.name);
+        return content.filter((content: any) => content[checkType]()).map((content: any) => content.name);
     }
 }
