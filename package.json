@@ -5,24 +5,14 @@
   "main": "index.js",
   "scripts": {
     "initiate": "npm install --recursive && git remote rm origin",
-    "server": "nodemon app.ts"
+    "start": "nodemon app.ts"
   },
   "devDependencies": {
-    "@types/cookie-parser": "",
-    "@types/cors": "",
-    "@types/express": "",
-    "@types/morgan": "",
     "@types/node": "",
     "tsx": ""
   },
   "dependencies": {
-    "cookie-parser": "",
-    "cors": "",
     "dotenv": "",
-    "express": "",
-    "express-rate-limit": "",
-    "helmet": "",
-    "morgan": "",
     "nodemon": "",
     "ts-node": ""
   },
