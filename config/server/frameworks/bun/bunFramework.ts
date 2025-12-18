@@ -2,11 +2,6 @@ import { join } from "path";
 import { BunFrameworkType, IMetadata, IRequest, IResponse } from "../../types";
 import { BaseFramework } from "../Base";
 
-interface IStatusMethod {
-    json: (data: any) => any,
-    send: (data: any) => any
-}
-
 export class BunFramework extends BaseFramework<BunFrameworkType> {
     public metadata: Partial<IMetadata<BunFrameworkType>> = { runtime: 'bun' };
     protected staticDir: string = join(__dirname, '../../../../public');
@@ -17,7 +12,7 @@ export class BunFramework extends BaseFramework<BunFrameworkType> {
         helmet: { hono: 'hono/secure-headers', elysia: '@elysiajs/html' },
         morgan: { hono: 'hono/logger', elysia: '@elysiajs/logger' },
         rateLimit: { hono: 'hono-rate-limiter', elysia: '@elysiajs/limit' },
-        static: { hono: 'hono/static', elysia: '@elysiajs/static' }
+        static: { hono: 'hono/bun', elysia: '@elysiajs/static' }
     };
 
     public async init(): Promise<BaseFramework<BunFrameworkType>> {
@@ -32,6 +27,11 @@ export class BunFramework extends BaseFramework<BunFrameworkType> {
     public async createRouter(): Promise<any> {
         // @ts-ignore
         const app = new (await import(this.metadata.framework))[this.metadata.framework === 'hono' ? 'Hono' : 'Elysia']();
+
+        // Hono doesn't expose .head() directly, verify and polyfill
+        if (this.metadata.framework === 'hono' && !app.head && app.on) {
+            app.head = function (path: string, handler: any) { return this.on('HEAD', path, handler); };
+        }
 
         const methods = ['get', 'post', 'put', 'delete', 'patch', 'head', 'options'] as const;
         const createResponse = (status: (code: number) => ReturnType<IResponse['status']>): IResponse => {
@@ -60,9 +60,10 @@ export class BunFramework extends BaseFramework<BunFrameworkType> {
         });
         // Polyfill .use to support .use(path, subApp) mapping to .route(path, subApp) -> Hono
         // Polyfill .use mapping to .group -> Elysia
+        const originalUse = app.use.bind(app);
         app.use = (arg1: any, arg2: any) => this.metadata.framework === 'hono'
-            ? typeof arg1 === 'string' && arg2 && typeof arg2.fetch === 'function' ? app.route(arg1, arg2) : app.use.call(app, arg1, arg2)
-            : typeof arg1 === 'string' && arg2 ? app.group(arg1, (g: any) => g.use(arg2)) : app.use(arg1)
+            ? typeof arg1 === 'string' && arg2 && typeof arg2.fetch === 'function' ? app.route(arg1, arg2) : originalUse(arg1, arg2)
+            : typeof arg1 === 'string' && arg2 ? app.group(arg1, (g: any) => g.use(arg2)) : originalUse(arg1)
 
         return app;
     }
@@ -82,7 +83,7 @@ export class BunFramework extends BaseFramework<BunFrameworkType> {
     protected async addStaticFiles(): Promise<void> {
         const staticMiddleware = await import(this.middlewares.static[this.metadata.framework!]);
         this.metadata.framework === 'hono'
-            ? this.metadata.server.use('/*', staticMiddleware.default({ root: this.staticDir }))
+            ? this.metadata.server.use('/*', staticMiddleware.serveStatic({ root: this.staticDir }))
             : this.metadata.server.use(staticMiddleware.default({ assets: this.staticDir }));
     }
 }

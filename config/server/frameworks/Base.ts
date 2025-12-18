@@ -51,8 +51,9 @@ export abstract class BaseFramework<TFrameworks extends NodeFrameworkType | BunF
     // Security middleware - conditionally applied based on config
     protected async addCors(): Promise<void> {
         try {
-            const corsModule = (await import(this.middlewares.cors[this.metadata.framework!])).default;
-            this.metadata.server[this.usageKey](corsModule(appConfig.security.cors));
+            const module = await import(this.middlewares.cors[this.metadata.framework!]);
+            const cors = module.cors || module.default;
+            if (cors) this.metadata.server[this.usageKey](cors(appConfig.security.cors));
         } catch (error) {
             throw new Error(`Failed to add CORS middleware: ${error}`);
         }
@@ -60,8 +61,10 @@ export abstract class BaseFramework<TFrameworks extends NodeFrameworkType | BunF
 
     protected async addHelmet(): Promise<void> {
         try {
-            const helmetModule = (await import(this.middlewares.helmet[this.metadata.framework!])).default;
-            this.metadata.server[this.usageKey](helmetModule(appConfig.security.helmet));
+            // Hono: secureHeaders. Elysia: html?
+            const module = await import(this.middlewares.helmet[this.metadata.framework!]);
+            const helmet = module.secureHeaders || module.default; // Hono uses secureHeaders
+            if (helmet) this.metadata.server[this.usageKey](helmet(appConfig.security.helmet));
         } catch (error) {
             throw new Error(`Failed to add helmet middleware: ${error}`);
         }
@@ -69,8 +72,9 @@ export abstract class BaseFramework<TFrameworks extends NodeFrameworkType | BunF
 
     protected async addRateLimit(): Promise<void> {
         try {
-            const rateLimitModule = (await import(this.middlewares.rateLimit[this.metadata.framework!])).default;
-            this.metadata.server[this.usageKey](rateLimitModule(appConfig.security.rateLimit));
+            const module = await import(this.middlewares.rateLimit[this.metadata.framework!]);
+            const limiter = module.rateLimit || module.default; // Check specific exports
+            if (limiter) this.metadata.server[this.usageKey](limiter(appConfig.security.rateLimit));
         } catch (error) {
             throw new Error(`Failed to add rate limit middleware: ${error}`);
         }
@@ -78,9 +82,10 @@ export abstract class BaseFramework<TFrameworks extends NodeFrameworkType | BunF
 
     protected async addCookieParser(): Promise<void> {
         try {
-            if (this.metadata.framework === 'elysia') return;
-            const cookieParserModule = (await import(this.middlewares.cookieParser[this.metadata.framework!])).default;
-            this.metadata.server[this.usageKey](cookieParserModule());
+            if (this.metadata.framework === 'hono') return; // Hono has built-in cookie helpers, no middleware needed
+            const module = await import(this.middlewares.cookieParser[this.metadata.framework!]);
+            const cookieParser = module.cookie || module.default; // Elysia uses 'cookie'
+            if (cookieParser) this.metadata.server[this.usageKey](cookieParser());
         } catch (error) {
             throw new Error(`Failed to add cookie parser middleware: ${error}`);
         }
@@ -88,8 +93,9 @@ export abstract class BaseFramework<TFrameworks extends NodeFrameworkType | BunF
 
     protected async addMorgan(): Promise<void> {
         try {
-            const morganModule = (await import(this.middlewares.morgan[this.metadata.framework!])).default;
-            this.metadata.server[this.usageKey](morganModule());
+            const module = await import(this.middlewares.morgan[this.metadata.framework!]);
+            const logger = module.logger || module.default; // Hono uses 'logger', Elysia uses 'logger'
+            if (logger) this.metadata.server[this.usageKey](logger());
         } catch (error) {
             throw new Error(`Failed to add morgan middleware: ${error}`);
         }
