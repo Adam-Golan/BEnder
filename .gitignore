@@ -1,2 +1,19 @@
-node_modules
 package-lock.json
+node_modules/
+dist/
+build/
+.env
+.DS_Store
+coverage/
+.vscode/
+
+# Logs
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Generated Error Logs (Recursive)
+**/_errors.json
+**/_error.json
