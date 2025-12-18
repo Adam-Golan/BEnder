@@ -14,16 +14,20 @@ import { DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT } from './methods';
     const results = await Promise.allSettled([get, put, head, post, patch, del, options].map(n => n.ready));
     results.forEach((r, i) => r.status === 'rejected' && console.error(`[Neuron ${i}] Failed to initialize:`, r.reason));
 
-    // 3. Mount Neurons (Using universal '*' pattern)
+    // 3. Mount Neurons (Using universal '*' pattern, adjusted for Express 5)
     // Note: server (from framework.metadata.server) is compatible with .get/.post via generic wrapper or native API
+
+    // Express 5 requires '(.*)' for wildcards, others use '*'
+    const wildcard = framework.metadata.framework === 'express' ? '/{*splat}' : '*';
+
     server
-        .get('*', get.router)
-        .put('*', put.router)
-        .head('*', head.router)
-        .post('*', post.router)
-        .patch('*', patch.router)
-        .delete('*', del.router)
-        .options('*', options.router)
+        .get(wildcard, get.router)
+        .put(wildcard, put.router)
+        .head(wildcard, head.router)
+        .post(wildcard, post.router)
+        .patch(wildcard, patch.router)
+        .delete(wildcard, del.router)
+        .options(wildcard, options.router)
         .use((_: IRequest, res: IResponse) => { res.status(404).json({ message: 'Route not found' }) });
 
     // 4. Start Listening
