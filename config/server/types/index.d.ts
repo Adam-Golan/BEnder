@@ -1,5 +1,5 @@
 export type RuntimeType = 'node' | 'bun';
-export type NodeFrameworkType = 'express' | 'fastify';
+export type NodeFrameworkType = 'express' | 'fastify' | 'koa';
 export type BunFrameworkType = 'elysia' | 'hono';
 export type FrameworkMiddlewareType = 'cors' | 'cookieParser' | 'helmet' | 'morgan' | 'rateLimit';
 

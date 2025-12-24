@@ -10,5 +10,5 @@ function detectRuntime(): RuntimeType {
 }
 
 export async function initServer(): Promise<BaseFramework<any>> {
-    return await (detectRuntime() === 'bun' ? new BunFramework(['hono', 'elysia']).init() : new NodeFramework(['express', 'fastify']).init());
+    return await (detectRuntime() === 'bun' ? new BunFramework(['hono', 'elysia']).init() : new NodeFramework(['express', 'fastify', 'koa']).init());
 }

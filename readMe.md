@@ -28,6 +28,11 @@ npm install fastify @fastify/static @fastify/cors @fastify/helmet @fastify/rate-
 npm install express @types/express cors helmet morgan cookie-parser express-rate-limit
 ```
 
+**Koa**
+```bash
+npm install koa @koa/router koa-bodyparser @koa/cors koa-helmet koa-morgan koa-static koa-ratelimit
+```
+
 #### 🥯 Bun
 
 **Hono** (Recommended)
@@ -167,8 +172,9 @@ All configured via `app.config.ts`.
 |---------|------------|--------|
 | **Node.js** | Fastify | ✅ Verified |
 | **Node.js** | Express | ✅ Verified |
-| **Bun** | Hono | ✅ Verified |
-| **Bun** | Elysia | ✅ Verified |
+| **Node.js** | Koa     | ✅ Ready for Verification |
+| **Bun**     | Hono    | ✅ Verified |
+| **Bun**     | Elysia  | ✅ Verified |
 
 ---
 

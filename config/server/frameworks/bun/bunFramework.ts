@@ -4,6 +4,7 @@ import { BaseFramework } from "../Base";
 
 export class BunFramework extends BaseFramework<BunFrameworkType> {
     public metadata: Partial<IMetadata<BunFrameworkType>> = { runtime: 'bun' };
+    protected routerRef: any;
     protected staticDir: string = join(__dirname, '../../../../public');
     protected usageKey: string = '';
     protected middlewares: Record<'cors' | 'cookieParser' | 'helmet' | 'morgan' | 'rateLimit' | 'static', Record<BunFrameworkType, string>> = {
@@ -18,6 +19,8 @@ export class BunFramework extends BaseFramework<BunFrameworkType> {
     public async init(): Promise<BaseFramework<BunFrameworkType>> {
         await super.init();
         this.metadata.server = await this.createRouter();
+        // @ts-ignore
+        this.routerRef = (await import(this.metadata.framework))[this.metadata.framework === 'hono' ? 'Hono' : 'Elysia']
         // Hono uses 'use'. Elysia uses 'use'.
         this.usageKey = 'use';
         await super.setupMiddleware();
@@ -25,8 +28,7 @@ export class BunFramework extends BaseFramework<BunFrameworkType> {
     }
 
     public async createRouter(): Promise<any> {
-        // @ts-ignore
-        const app = new (await import(this.metadata.framework))[this.metadata.framework === 'hono' ? 'Hono' : 'Elysia']();
+        const app = new this.routerRef();
 
         // Hono doesn't expose .head() directly, verify and polyfill
         if (this.metadata.framework === 'hono' && !app.head && app.on) {

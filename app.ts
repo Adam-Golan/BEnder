@@ -18,7 +18,7 @@ import { DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT } from './methods';
     // Note: server (from framework.metadata.server) is compatible with .get/.post via generic wrapper or native API
 
     // Express 5 requires '(.*)' for wildcards, others use '*'
-    const wildcard = framework.metadata.framework === 'express' ? '/{*splat}' : '*';
+    const wildcard = ['express','koa'].includes(framework.metadata.framework) ? '/{*splat}' : '*';
 
     server
         .get(wildcard, get.router)

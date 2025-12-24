@@ -1,12 +1,12 @@
 import { Synapse } from "../../base";
-import { Request, Response } from 'express';
+import { IRequest, IResponse } from "../../../config/server/types";
 
 export class GET_DB extends Synapse {
     constructor() {
         super(__dirname);
     }
     protected async setRouter(): Promise<void> {
-        this.router.use(`/:action`, (req: Request, res: Response) => {
+        this.router.use(`/:action`, (req: IRequest, res: IResponse) => {
             let response: unknown;
             let status: number;
 

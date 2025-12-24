@@ -3,6 +3,7 @@ import { IMetadata, BunFrameworkType, FrameworkMiddlewareType, NodeFrameworkType
 
 export abstract class BaseFramework<TFrameworks extends NodeFrameworkType | BunFrameworkType> {
     public abstract metadata: Partial<IMetadata<TFrameworks>>;
+    protected abstract routerRef: any;
     protected abstract staticDir: string;
     protected abstract usageKey: string;
     protected abstract middlewares: Record<FrameworkMiddlewareType, Record<TFrameworks, string>>;
@@ -82,8 +83,10 @@ export abstract class BaseFramework<TFrameworks extends NodeFrameworkType | BunF
 
     protected async addCookieParser(): Promise<void> {
         try {
-            if (this.metadata.framework === 'hono') return; // Hono has built-in cookie helpers, no middleware needed
-            const module = await import(this.middlewares.cookieParser[this.metadata.framework!]);
+            const pkg = this.middlewares.cookieParser[this.metadata.framework!];
+            if (!pkg || this.metadata.framework === 'hono') return;
+
+            const module = await import(pkg);
             const cookieParser = module.cookie || module.default; // Elysia uses 'cookie'
             if (cookieParser) this.metadata.server[this.usageKey](cookieParser());
         } catch (error) {
