@@ -1,6 +1,6 @@
 # Welcome to BEnder! 🧠
 
-**BEnder** is a **Framework-Agnostic** TypeScript boilerplate featuring a brain-inspired architecture for rapid backend development. It uses a unique **Neuron/Synapse** pattern that enables intuitive, file-system-based routing, running seamlessly on **Node.js** (Express, Fastify) and **Bun** (Hono, Elysia).
+**BEnder** is a **Framework-Agnostic** TypeScript boilerplate featuring a brain-inspired architecture for rapid backend development. It uses a unique **Neuron/Synapse** pattern that enables intuitive, file-system-based routing, running seamlessly on **Node.js** and **Bun**.
 
 ---
 
@@ -14,40 +14,54 @@ npm install
 
 ### 2. Install Framework Dependencies
 
-Choose your runtime and framework (BEnder detects them automatically):
+Install your framework (BEnder detects them automatically):
 
-#### 🟢 Node.js
+#### 🟢 Node + 🥯 Bun
 
-**Fastify** (Recommended)
+**Fastify**
 ```bash
+*(Node)*
 npm install fastify @fastify/static @fastify/cors @fastify/helmet @fastify/rate-limit @fastify/cookie fastify-morgan
+
+*(Bun)*
+bun add fastify @fastify/static @fastify/cors @fastify/helmet @fastify/rate-limit @fastify/cookie fastify-morgan
 ```
 
 **Express**
 ```bash
+*(Node)*
 npm install express @types/express cors helmet morgan cookie-parser express-rate-limit
+
+*(Bun)*
+bun add express @types/express cors helmet morgan cookie-parser express-rate-limit
 ```
 
 **Koa**
 ```bash
+*(Node)*
 npm install koa @koa/router koa-bodyparser @koa/cors koa-helmet koa-morgan koa-static koa-ratelimit
+
+*(Bun)*
+bun add koa @koa/router koa-bodyparser @koa/cors koa-helmet koa-morgan koa-static koa-ratelimit
+```
+
+**Hono**
+*(Note: To run Hono on Node.js, install `@hono/node-server`)*
+```bash
+*(Node)*
+npm install hono @hono/node-server hono-rate-limiter
+
+*(Bun)*
+bun add hono @hono/node-server hono-rate-limiter
 ```
 
 #### 🥯 Bun
 
-**Hono** (Recommended)
+**Elysia**
+*(Note: Elysia is only available for Bun)*
 ```bash
-bun add hono hono-rate-limiter
+bun add elysia @elysiajs/static @elysiajs/cors @elysiajs/cookie @elysiajs/html @elysiajs/logger @elysiajs/limit
 ```
-*(Note: To run Hono on Node.js, install `@hono/node-server`)*
-```bash
-npm install hono @hono/node-server hono-rate-limiter
-```
-
-<!-- **Elysia**
-```bash
-npm install elysia @elysiajs/static @elysiajs/cors @elysiajs/cookie @elysiajs/html @elysiajs/logger @elysiajs/limit
-``` -->
 
 ### 3. Run the Server
 
@@ -174,10 +188,10 @@ All configured via `app.config.ts`.
 
 | Runtime | Frameworks | Status |
 |---------|------------|--------|
-| **Node.js** | Fastify | ✅ Verified |
-| **Node.js** | Express | ✅ Verified |
-| **Node.js** | Koa     | ✅ Ready for Verification |
-| **Bun**     | Hono    | ✅ Verified |
+| **Both** | Fastify | ✅ Verified |
+| **Both** | Express | ✅ Verified |
+| **Both** | Koa     | ✅ Ready for Verification |
+| **Both**     | Hono    | ✅ Verified |
 | **Bun**     | Elysia  | ✅ Verified |
 
 ---
