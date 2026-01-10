@@ -1,5 +1,4 @@
-
-import { HttpMethod, RouteHandler } from "../../types";
+import { IRequest, IResponse, HttpMethod, RouteHandler } from "../../../types";
 
 export class FastifyRouterShim {
     private routes: { method: HttpMethod, path: string, handler: RouteHandler }[] = [];

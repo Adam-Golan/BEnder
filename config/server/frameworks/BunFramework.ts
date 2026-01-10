@@ -1,12 +1,14 @@
 import { join } from "path";
-import { BunFrameworkType, IMetadata, IRequest, IResponse } from "../../types";
-import { BaseFramework } from "../Base";
+import { BunFrameworkType, IMetadata, IRequest, IResponse } from "../types";
+import { BaseFramework } from "./Base";
 
 export class BunFramework extends BaseFramework<BunFrameworkType> {
     public metadata: Partial<IMetadata<BunFrameworkType>> = { runtime: 'bun' };
     protected routerRef: any;
-    protected staticDir: string = join(__dirname, '../../../../public');
+    protected staticDir: string = join(__dirname, '../../../public');
     protected usageKey: string = '';
+
+    // Extended middleware map for Hono/Elysia
     protected middlewares: Record<'cors' | 'cookieParser' | 'helmet' | 'morgan' | 'rateLimit' | 'static', Record<BunFrameworkType, string>> = {
         cors: { hono: 'hono/cors', elysia: '@elysiajs/cors' },
         cookieParser: { hono: 'hono/cookie', elysia: '@elysiajs/cookie' },
@@ -18,10 +20,9 @@ export class BunFramework extends BaseFramework<BunFrameworkType> {
 
     public async init(): Promise<BaseFramework<BunFrameworkType>> {
         await super.init();
-        this.metadata.server = await this.createRouter();
         // @ts-ignore
         this.routerRef = (await import(this.metadata.framework))[this.metadata.framework === 'hono' ? 'Hono' : 'Elysia']
-        // Hono uses 'use'. Elysia uses 'use'.
+        this.metadata.server = await this.createRouter();
         this.usageKey = 'use';
         await super.setupMiddleware();
         return this;
@@ -30,7 +31,7 @@ export class BunFramework extends BaseFramework<BunFrameworkType> {
     public async createRouter(): Promise<any> {
         const app = new this.routerRef();
 
-        // Hono doesn't expose .head() directly, verify and polyfill
+        // Hono HEAD polyfill
         if (this.metadata.framework === 'hono' && !app.head && app.on) {
             app.head = function (path: string, handler: any) { return this.on('HEAD', path, handler); };
         }
@@ -60,8 +61,8 @@ export class BunFramework extends BaseFramework<BunFrameworkType> {
                 });
             }
         });
-        // Polyfill .use to support .use(path, subApp) mapping to .route(path, subApp) -> Hono
-        // Polyfill .use mapping to .group -> Elysia
+
+        // Polyfill .use
         const originalUse = app.use.bind(app);
         app.use = (arg1: any, arg2: any) => this.metadata.framework === 'hono'
             ? typeof arg1 === 'string' && arg2 && typeof arg2.fetch === 'function' ? app.route(arg1, arg2) : originalUse(arg1, arg2)
@@ -70,22 +71,52 @@ export class BunFramework extends BaseFramework<BunFrameworkType> {
         return app;
     }
 
-    public listen(port: number, callback?: () => void): void {
+    public async listen(port: number, callback?: () => void): Promise<void> {
         if (!this.metadata.server) throw new Error('Server not initialized');
+
+        // Detect Runtime (Node vs Bun)
+        // @ts-ignore
+        const isBun = typeof Bun !== 'undefined';
+
         if (this.metadata.framework === 'hono') {
-            // @ts-ignore
-            Bun.serve({
-                fetch: this.metadata.server.fetch,
-                port: port
-            });
-        } else this.metadata.server.listen(port);
+            if (isBun) {
+                // @ts-ignore
+                Bun.serve({
+                    fetch: this.metadata.server.fetch,
+                    port: port
+                });
+            } else {
+                // Node Runtime: Requires @hono/node-server
+                try {
+                    const { serve } = await import('@hono/node-server');
+                    serve({ fetch: this.metadata.server.fetch, port }, callback);
+                    return; // Callback handled by serve?
+                } catch (e) {
+                    console.error("Hono on Node requires '@hono/node-server'. Please install it.");
+                    throw e;
+                }
+            }
+        } else {
+            // Elysia
+            this.metadata.server.listen(port);
+        }
         callback?.();
     }
 
     protected async addStaticFiles(): Promise<void> {
-        const staticMiddleware = await import(this.middlewares.static[this.metadata.framework!]);
-        this.metadata.framework === 'hono'
-            ? this.metadata.server.use('/*', staticMiddleware.serveStatic({ root: this.staticDir }))
-            : this.metadata.server.use(staticMiddleware.default({ assets: this.staticDir }));
+        if (this.metadata.framework === 'hono') {
+            // @ts-ignore
+            const isBun = typeof Bun !== 'undefined';
+            if (isBun) {
+                const { serveStatic } = await import('hono/bun');
+                this.metadata.server.use('/*', serveStatic({ root: this.staticDir }));
+            } else {
+                const { serveStatic } = await import('@hono/node-server/serve-static');
+                this.metadata.server.use('/*', serveStatic({ root: this.staticDir }));
+            }
+        } else {
+            const staticMiddleware = await import(this.middlewares.static[this.metadata.framework!]);
+            this.metadata.server.use(staticMiddleware.default({ assets: this.staticDir }));
+        }
     }
 }

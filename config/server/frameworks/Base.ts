@@ -74,7 +74,7 @@ export abstract class BaseFramework<TFrameworks extends NodeFrameworkType | BunF
     protected async addRateLimit(): Promise<void> {
         try {
             const module = await import(this.middlewares.rateLimit[this.metadata.framework!]);
-            const limiter = module.rateLimit || module.default; // Check specific exports
+            const limiter = module.rateLimit || module.rateLimiter || module.default; // Check specific exports
             if (limiter) this.metadata.server[this.usageKey](limiter(appConfig.security.rateLimit));
         } catch (error) {
             throw new Error(`Failed to add rate limit middleware: ${error}`);

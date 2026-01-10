@@ -1,4 +1,4 @@
-import { IRequest, IResponse } from "../../../../types";
+import { IRequest, IResponse } from "../../../types";
 import { KoaBase } from "./KoaBase";
 
 export class KoaRouterShim extends KoaBase {
@@ -71,7 +71,7 @@ export class KoaRouterShim extends KoaBase {
     public middleware() {
         return this.router.routes();
     }
-    
+
     // Expose allowedMethods middleware separately if needed, or bundle?
     // Usually usage is: .use(router.routes()).use(router.allowedMethods())
     // We'll bundle allowedMethods in middleware() if feasible? 

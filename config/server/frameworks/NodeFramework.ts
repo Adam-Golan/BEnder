@@ -1,26 +1,26 @@
 
 import { join } from "path";
-import { NodeFrameworkType, IMetadata } from "../../types";
+import { NodeFrameworkType, IMetadata } from "../types";
 import { FastifyRouterShim } from "./adapters/fastify/FastifyRouterShim";
 import { KoaRouterShim } from "./adapters/koa/KoaRouterShim";
 import { KoaAdapter } from "./adapters/koa/KoaAdapter";
-import { BaseFramework } from "../Base";
+import { BaseFramework } from "./Base";
 
 export class NodeFramework extends BaseFramework<NodeFrameworkType> {
     public metadata: Partial<IMetadata<NodeFrameworkType>> = { runtime: 'node' };
     protected routerRef: any;
-    protected staticDir: string = join(__dirname, '../../../../public');
+    protected staticDir: string = join(__dirname, '../../../public');
     protected usageKey: string = '';
 
-    // Extended middleware map for Koa
+    // Extended middleware map for Koa/Express/Fastify
     protected middlewares: Record<'cors' | 'cookieParser' | 'helmet' | 'morgan' | 'rateLimit' | 'static' | 'bodyParser', Record<string, string>> = {
         cors: { express: 'cors', fastify: '@fastify/cors', koa: '@koa/cors' },
-        cookieParser: { express: 'cookie-parser', fastify: '@fastify/cookie', koa: '' }, // Koa native support
+        cookieParser: { express: 'cookie-parser', fastify: '@fastify/cookie', koa: '' },
         helmet: { express: 'helmet', fastify: '@fastify/helmet', koa: 'koa-helmet' },
         morgan: { express: 'morgan', fastify: 'fastify-morgan', koa: 'koa-morgan' },
         rateLimit: { express: 'express-rate-limit', fastify: '@fastify/rate-limit', koa: 'koa-ratelimit' },
         static: { express: 'express', fastify: '@fastify/static', koa: 'koa-static' },
-        bodyParser: { koa: 'koa-bodyparser' } // Koa specific
+        bodyParser: { koa: 'koa-bodyparser' }
     };
 
     public async init(): Promise<BaseFramework<NodeFrameworkType>> {
@@ -56,7 +56,6 @@ export class NodeFramework extends BaseFramework<NodeFrameworkType> {
 
     public listen(port: number, callback?: () => void): void {
         if (!this.metadata.server) throw new Error('Server not initialized');
-        // KoaAdapter handles .listen same as Express
         this.metadata.framework === 'fastify'
             ? (this.metadata.server as any).listen({ port }, callback)
             : (this.metadata.server as any).listen(port, callback);
@@ -96,7 +95,7 @@ export class NodeFramework extends BaseFramework<NodeFrameworkType> {
         (this as any)._koaBodyParserAdded = true;
 
         const bodyParserModule = await import(this.middlewares.bodyParser.koa!);
-        const bodyParser = bodyParserModule.default || bodyParserModule; // koa-bodyparser
+        const bodyParser = bodyParserModule.default || bodyParserModule;
         this.metadata.server.use(bodyParser());
     }
 

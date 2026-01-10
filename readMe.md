@@ -37,13 +37,17 @@ npm install koa @koa/router koa-bodyparser @koa/cors koa-helmet koa-morgan koa-s
 
 **Hono** (Recommended)
 ```bash
-npm install hono hono-rate-limiter
+bun add hono hono-rate-limiter
+```
+*(Note: To run Hono on Node.js, install `@hono/node-server`)*
+```bash
+npm install hono @hono/node-server hono-rate-limiter
 ```
 
-**Elysia**
+<!-- **Elysia**
 ```bash
 npm install elysia @elysiajs/static @elysiajs/cors @elysiajs/cookie @elysiajs/html @elysiajs/logger @elysiajs/limit
-```
+``` -->
 
 ### 3. Run the Server
 
