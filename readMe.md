@@ -21,10 +21,10 @@ Install your framework (BEnder detects them automatically):
 **Fastify**
 ```bash
 *(Node)*
-npm install fastify @fastify/static @fastify/cors @fastify/helmet @fastify/rate-limit @fastify/cookie fastify-morgan
+npm install fastify @fastify/static @fastify/cors @fastify/helmet @fastify/rate-limit @fastify/cookie
 
 *(Bun)*
-bun add fastify @fastify/static @fastify/cors @fastify/helmet @fastify/rate-limit @fastify/cookie fastify-morgan
+bun add fastify @fastify/static @fastify/cors @fastify/helmet @fastify/rate-limit @fastify/cookie
 ```
 
 **Express**
