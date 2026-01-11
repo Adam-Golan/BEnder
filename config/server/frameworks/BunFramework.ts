@@ -88,6 +88,7 @@ export class BunFramework extends BaseFramework<BunFrameworkType> {
             } else {
                 // Node Runtime: Requires @hono/node-server
                 try {
+                    // @ts-ignore
                     const { serve } = await import('@hono/node-server');
                     serve({ fetch: this.metadata.server.fetch, port }, callback);
                     return; // Callback handled by serve?
@@ -108,9 +109,11 @@ export class BunFramework extends BaseFramework<BunFrameworkType> {
             // @ts-ignore
             const isBun = typeof Bun !== 'undefined';
             if (isBun) {
+                // @ts-ignore
                 const { serveStatic } = await import('hono/bun');
                 this.metadata.server.use('/*', serveStatic({ root: this.staticDir }));
             } else {
+                // @ts-ignore
                 const { serveStatic } = await import('@hono/node-server/serve-static');
                 this.metadata.server.use('/*', serveStatic({ root: this.staticDir }));
             }
