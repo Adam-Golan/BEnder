@@ -21,5 +21,5 @@ export async function initServer(): Promise<BaseFramework<any>> {
     if (isInstalled('hono')) return new BunFramework(['hono', 'elysia']).init();
     if (isInstalled('elysia') && detectRuntime() === 'bun') return new BunFramework(['hono', 'elysia']).init();
     if (isInstalled('elysia') && detectRuntime() === 'node') throw new Error('Elysia is not supported on Node.js');
-    return new NodeFramework(['express', 'fastify', 'koa']).init();
+    return new NodeFramework(['fastify', 'express', 'koa']).init();
 }

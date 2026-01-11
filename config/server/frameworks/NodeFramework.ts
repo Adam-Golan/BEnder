@@ -2,6 +2,7 @@
 import { join } from "path";
 import { NodeFrameworkType, IMetadata } from "../types";
 import { FastifyRouterShim } from "./adapters/fastify/FastifyRouterShim";
+import { FastifyAdapter } from "./adapters/fastify/FastifyAdapter";
 import { KoaRouterShim } from "./adapters/koa/KoaRouterShim";
 import { KoaAdapter } from "./adapters/koa/KoaAdapter";
 import { BaseFramework } from "./Base";
@@ -14,12 +15,12 @@ export class NodeFramework extends BaseFramework<NodeFrameworkType> {
 
     // Extended middleware map for Koa/Express/Fastify
     protected middlewares: Record<'cors' | 'cookieParser' | 'helmet' | 'morgan' | 'rateLimit' | 'static' | 'bodyParser', Record<string, string>> = {
-        cors: { express: 'cors', fastify: '@fastify/cors', koa: '@koa/cors' },
-        cookieParser: { express: 'cookie-parser', fastify: '@fastify/cookie', koa: '' },
-        helmet: { express: 'helmet', fastify: '@fastify/helmet', koa: 'koa-helmet' },
-        morgan: { express: 'morgan', fastify: 'fastify-morgan', koa: 'koa-morgan' },
-        rateLimit: { express: 'express-rate-limit', fastify: '@fastify/rate-limit', koa: 'koa-ratelimit' },
-        static: { express: 'express', fastify: '@fastify/static', koa: 'koa-static' },
+        cors: { express: 'cors', fastify: './adapters/fastify/middlewares', koa: '@koa/cors' },
+        cookieParser: { express: 'cookie-parser', fastify: './adapters/fastify/middlewares', koa: '' },
+        helmet: { express: 'helmet', fastify: './adapters/fastify/middlewares', koa: 'koa-helmet' },
+        morgan: { express: 'morgan', fastify: './adapters/fastify/middlewares', koa: 'koa-morgan' },
+        rateLimit: { express: 'express-rate-limit', fastify: './adapters/fastify/middlewares', koa: 'koa-ratelimit' },
+        static: { express: 'express', fastify: './adapters/fastify/middlewares', koa: 'koa-static' },
         bodyParser: { koa: 'koa-bodyparser' }
     };
 
@@ -36,8 +37,13 @@ export class NodeFramework extends BaseFramework<NodeFrameworkType> {
         this.usageKey = this.metadata.framework === 'fastify' ? 'register' : 'use';
         switch (this.metadata.framework) {
             case 'express':
-            case 'fastify':
+                // @ts-ignore
                 this.metadata.server = (await import(this.metadata.framework)).default();
+                break;
+            case 'fastify':
+                // @ts-ignore
+                const fastifyInstance = (await import(this.metadata.framework)).default({ exposeHeadRoutes: false });
+                this.metadata.server = new FastifyAdapter(fastifyInstance);
                 break;
             case 'koa':
                 // @ts-ignore
@@ -65,7 +71,7 @@ export class NodeFramework extends BaseFramework<NodeFrameworkType> {
         const staticMiddleware = await import(this.middlewares.static[this.metadata.framework!]);
 
         if (this.metadata.framework === 'express') this.metadata.server.use(staticMiddleware.default(this.staticDir));
-        if (this.metadata.framework === 'fastify') this.metadata.server.register(staticMiddleware.default, { root: this.staticDir });
+        if (this.metadata.framework === 'fastify') this.metadata.server.use(staticMiddleware.staticFiles({ root: this.staticDir }));
         if (this.metadata.framework === 'koa') {
             const serve = staticMiddleware.default || staticMiddleware;
             this.metadata.server.use(serve(this.staticDir));
