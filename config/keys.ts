@@ -1,15 +1,13 @@
 import { config } from 'dotenv';
+import { appConfig } from '../app.config';
 
 // Load environment variables
 config();
 
 // Validate required environment variables
-const requiredEnvVars = ['PORT', 'NODE_ENV'];
-const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+const missingEnvVars = appConfig.requiredEnvVars.filter(varName => !process.env[varName]);
 
-if (missingEnvVars.length > 0) {
-    console.warn(`Warning: Missing environment variables: ${missingEnvVars.join(', ')}`);
-}
+if (missingEnvVars.length > 0) throw new Error(`Missing environment variables: ${missingEnvVars.join(', ')}`);
 
 export default {
     env: {

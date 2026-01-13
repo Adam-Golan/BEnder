@@ -26,6 +26,7 @@ export const appConfig: AppConfig = {
         prefix: '/api',
         version: 'v1',
     },
+    requiredEnvVars: ['PORT', 'NODE_ENV'],
 };
 
 export interface AppConfig {
@@ -33,4 +34,5 @@ export interface AppConfig {
     auth?: AuthConfig;
     security: SecurityConfig;
     api?: ApiConfig;
+    requiredEnvVars: string[];
 }
