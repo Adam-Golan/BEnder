@@ -39,10 +39,10 @@ bun add express @types/express cors helmet morgan cookie-parser express-rate-lim
 **Koa**
 ```bash
 *(Node)*
-npm install koa @koa/router koa-bodyparser @koa/cors koa-helmet koa-morgan koa-static koa-ratelimit
+npm install koa @koa/router koa-bodyparser @koa/cors koa-helmet koa-morgan koa-static koa-ratelimit @types/koa
 
 *(Bun)*
-bun add koa @koa/router koa-bodyparser @koa/cors koa-helmet koa-morgan koa-static koa-ratelimit
+bun add koa @koa/router koa-bodyparser @koa/cors koa-helmet koa-morgan koa-static koa-ratelimit @types/koa
 ```
 
 **Hono**
