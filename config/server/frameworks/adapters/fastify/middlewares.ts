@@ -57,10 +57,3 @@ export const staticFiles = (options: any) => {
         }
     }
 }
-
-// Mock morgan/logger if needed, or implement
-export const morgan = (options: any) => {
-    return (instance: any) => {
-        // No-op or implementation
-    }
-}
