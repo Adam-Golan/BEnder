@@ -39,10 +39,10 @@ bun add express @types/express cors helmet morgan cookie-parser express-rate-lim
 **Koa**
 ```bash
 *(Node)*
-npm install koa @koa/router koa-bodyparser @koa/cors koa-helmet koa-morgan koa-static koa-ratelimit @types/koa
+npm install koa @koa/router koa-bodyparser @koa/cors koa-helmet koa-morgan koa-static koa-ratelimit @types/koa @types/koa-ratelimit
 
 *(Bun)*
-bun add koa @koa/router koa-bodyparser @koa/cors koa-helmet koa-morgan koa-static koa-ratelimit @types/koa
+bun add koa @koa/router koa-bodyparser @koa/cors koa-helmet koa-morgan koa-static koa-ratelimit @types/koa @types/koa-ratelimit
 ```
 
 **Hono**
@@ -52,14 +52,18 @@ bun add koa @koa/router koa-bodyparser @koa/cors koa-helmet koa-morgan koa-stati
 npm install hono @hono/node-server hono-rate-limiter
 
 *(Bun)*
-bun add hono @hono/node-server hono-rate-limiter
+bun add hono hono-rate-limiter
 ```
 
 #### 🥯 Bun
 
 **Elysia**
-*(Note: Elysia is only available for Bun)*
+*(Note: To run Elysia on Node.js, install `@elysiajs/node`)*
 ```bash
+*(Node)*
+npm install elysia @elysiajs/static @elysiajs/cors @elysiajs/cookie @elysiajs/html @elysiajs/logger @elysiajs/limit @elysiajs/node
+
+*(Bun)*
 bun add elysia @elysiajs/static @elysiajs/cors @elysiajs/cookie @elysiajs/html @elysiajs/logger @elysiajs/limit
 ```
 

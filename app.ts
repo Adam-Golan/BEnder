@@ -1,12 +1,14 @@
 import { IRequest, IResponse } from "./config/server/types";
-import { initInfrastructure } from './config/infrastructure';
+import { initInfrastructure, framework } from './config/infrastructure';
 import keys from './config/keys';
 import { DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT } from './methods';
 
 (async () => {
     // 1. Initialize Infrastructure (Framework + DB + Global Middleware)
-    const { framework, server } = await initInfrastructure();
+    await initInfrastructure();
 
+    if (!framework) throw new Error('Failed to initialize framework.\nCheck installations or workflow.');
+    
     // 2. Initialize Neurons
     const [get, put, head, post, patch, del, options] = [new GET(), new PUT(), new HEAD(), new POST(), new PATCH(), new DELETE(), new OPTIONS()];
 
@@ -18,9 +20,9 @@ import { DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT } from './methods';
     // Note: server (from framework.metadata.server) is compatible with .get/.post via generic wrapper or native API
 
     // Express 5 requires '(.*)' for wildcards, others use '*'
-    const wildcard = ['express','koa'].includes(framework.metadata.framework) ? '/{*splat}' : '*';
+    const wildcard = ['express', 'koa'].includes(framework.metadata.framework!) ? '/{*splat}' : '*';
 
-    server
+    framework
         .get(wildcard, get.router)
         .put(wildcard, put.router)
         .head(wildcard, head.router)

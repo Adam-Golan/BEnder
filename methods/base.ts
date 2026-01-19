@@ -35,9 +35,9 @@ export abstract class Synapse {
     constructor(protected dir: string) {
         this.ready = this.init();
     }
-
+    
     private async init() {
-        this.router = await framework.createRouter();
+        this.router = await framework!.createRouter();
         await this.setRouter();
     }
 

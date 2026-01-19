@@ -1,20 +1,23 @@
-import { initServer } from './server/server';
+import { UniversalAdapter } from './server/universalAdapter';
 import { appConfig } from '../app.config';
 
 // Initialize the server handling framework selection and middleware
-export let framework: any = null;
+export let framework: UniversalAdapter | null = null; // Renaming 'server' to 'framework' in export would break consumers, but 'framework' was BaseFramework before.
+// Wait, app.ts imports { framework, server }. 
+// Old: framework = BaseFramework instance, server = UniversalAdapter instance (metadata.server)
+// New: We only have UniversalAdapter.
+// app.ts uses 'framework.listen' and 'server.get/post'.
+// UniversalAdapter has both listen and get/post.
+// So both framework and server should point to the same UniversalAdapter instance.
 
 export const initInfrastructure = async () => {
-    // This detects runtime (Node/Bun) and initializes the appropriate Framework (Express/Fastify/Hono/Elysia)
-    framework = await initServer();
-
-    // Retrieve the active framework instance and the underlying server/app object
-    const server = framework.metadata.server;
+    // This detects framework (Express/Koa/Fastify/Hono/Elysia) and assign to exported variable
+    framework = await UniversalAdapter.init();
 
     // Connect DB logic (Preserved from previous implementation)
     await connectDatabase();
 
-    return { framework, server };
+    return framework;
 };
 
 // Database connection instances (exported for use in Synapses)

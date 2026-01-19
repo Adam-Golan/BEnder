@@ -25,12 +25,13 @@ export interface IResponse<TData = any> {
     type(type: string): this;
 }
 
+import { UniversalAdapter } from '../universalAdapter';
+
 export interface IMetadata<TFramework> {
     runtime: RuntimeType;
     framework: TFramework;
-    server: any;
+    server: UniversalAdapter;
 }
-
 
 import { Response } from 'express';
 import { FastifyReply } from 'fastify';
@@ -47,9 +48,9 @@ export interface IFrameworkRequest<TQuery = Record<string, string>, TParams = Re
 }
 
 export interface IHonoRequest<TQuery = Record<string, string>, TParams = Record<string, string>, TBody = any> {
-    headers: () => Record<string, string>;
+    header: () => Record<string, string>;
     query: () => TQuery;
-    params: () => TParams;
+    param: () => TParams;
     parseBody: () => TBody;
 }
 
@@ -62,18 +63,18 @@ export interface IFrameworkResponse {
     redirect(url: string): void;
 }
 
-export interface IExpressResponse extends Pick<Response, 'set' | 'status' | 'json' | 'redirect' | 'cookie'> {}
+export interface IExpressResponse extends Pick<Response, 'set' | 'status' | 'json' | 'redirect' | 'cookie'> { }
 
-export interface IFastifyResponse extends Pick<FastifyReply, 'header' | 'code' | 'send' | 'redirect' | 'cookie'> {}
+export interface IFastifyResponse extends Pick<FastifyReply, 'header' | 'code' | 'send' | 'redirect' | 'cookie'> { }
 
-export interface IKoaResponse extends Pick<KoaContext, 'set' | 'status' | 'body' | 'redirect' | 'cookies'> {}
+export interface IKoaResponse extends Pick<KoaContext, 'set' | 'status' | 'body' | 'redirect' | 'cookies'> { }
 
 export interface IHonoResponse extends Pick<HonoContext, 'header' | 'redirect'> {
     status(code: number): this;
     json(data: any): void;
 }
 
-export interface IElysiaResponse extends Pick<ElysiaContext, 'headers' | 'status' | 'body' | 'redirect' | 'cookie'> {}
+export interface IElysiaResponse extends Pick<ElysiaContext, 'headers' | 'status' | 'body' | 'redirect' | 'cookie'> { }
 
 export type IAllResponses = IExpressResponse | IFastifyResponse | IKoaResponse | IHonoResponse | IElysiaResponse;
 
