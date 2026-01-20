@@ -77,7 +77,7 @@ export class UniversalAdapter {
     public resDigest: (res: any) => IFrameworkResponse = (res: IFrameworkResponse) => res;
     public use: (path: string | IHandler, ...handlers: IHandler[]) => void = () => null;
     public injectRouter: (path: string, router: any) => void = () => null;
-    public createRouter: (path?: string) => Promise<UniversalAdapter> = async () => this;
+    public createRouter: (path?: string) => Promise<any> = async () => this;
 
     // Core references
     private routerModule: any | null = null;
@@ -110,12 +110,7 @@ export class UniversalAdapter {
             // @ts-ignore
             this.routerModule = await import('express').then(({ Router }) => Router);
             this.injectRouter = (path, router) => this.app.use(path, router.native);
-            this.createRouter = async () => {
-                const router = new UniversalAdapter(this.routerModule(), this.type);
-                await router.initializeAdapters();
-                await router.bindMethods();
-                return router;
-            }
+            this.createRouter = async () => this.routerModule();
         }
 
         if (this.type === 'fastify') {
@@ -271,6 +266,7 @@ export class UniversalAdapter {
         // Static Files
         const staticDir = join(__dirname, '../../public');
         if (this.type === 'express') {
+            // @ts-ignore
             const express = (await import('express')).default;
             // @ts-ignore
             this.useNative(express.static(staticDir));
