@@ -27,7 +27,7 @@ export class UniversalAdapter {
             if (UniversalAdapter.isInstalled('express')) framework = 'express';
             if (UniversalAdapter.isInstalled('fastify')) framework = 'fastify';
             if (UniversalAdapter.isInstalled('koa')) framework = 'koa';
-            throw new Error('No supported framework found');
+            if (!framework) throw new Error('No supported framework found');
         }
 
         let app: any;
@@ -58,7 +58,7 @@ export class UniversalAdapter {
         console.log(`[BEnder] Detected: ${framework} framework - Initiating`);
         const adapter = new UniversalAdapter(app, framework as any);
         console.log(`[BEnder] Framework: ${framework} - Initiated`);
-        adapter.initializeAdapters();
+        await adapter.initializeAdapters();
         console.log(`[BEnder] Framework: ${framework} - Installing pre configured middleware`);
         await adapter.setupMiddleware();
         console.log(`[BEnder] Framework: ${framework} - Pre configured middleware installed`);
@@ -80,39 +80,45 @@ export class UniversalAdapter {
     public createRouter: (path?: string) => Promise<UniversalAdapter> = async () => this;
 
     // Core references
-    private routerModule: Promise<any> | null = null;
+    private routerModule: any | null = null;
     private routingMethods: HttpMethod[] = ['get', 'post', 'put', 'delete', 'patch', 'head', 'options'];
 
     // Native middleware registration
     public useNative: (middleware: any, options?: any) => void = () => null;
 
-    constructor(public app: any, private framework: NodeFrameworkType | BunFrameworkType) {
-        if (!app || !framework) throw new Error('App and Framework must be defined');
-        if (!["express", "fastify", "koa", "hono", "elysia"].find((f) => f === framework)) throw new Error('Framework is not supported');
+    constructor(private app: any, public type: NodeFrameworkType | BunFrameworkType) {
+        if (!app || !type) throw new Error('App and Framework must be defined');
+        if (!["express", "fastify", "koa", "hono", "elysia"].find((f) => f === type)) throw new Error('Framework is not supported');
     }
 
-    public initializeAdapters() {
+    private async initializeAdapters() {
         // 1. Default bindings (Generic for apps with .get/.post)
         for (const method of this.routingMethods)
             this[method] = (path: string, ...handlers: IHandler[]) => {
                 for (const handler of handlers) this.app[method](path, handleHandler(handler));
+                return this;
             }
 
         let handleHandler = (handler: IHandler | AsyncHeader): ((...args: any[]) => void) => async (req: IFrameworkRequest, res: any, next?: () => Promise<any>) => {
             return handler(await this.reqDigest(req), this.resDigest(res), next);
         };
 
-        if (this.framework === 'express') {
+        if (this.type === 'express') {
             this.resDigest = (res: IExpressResponse) => res;
             this.use = (path, ...handlers) => handlers.forEach(handler => this.app.use(path, handleHandler(handler)));
             this.useNative = (middleware) => this.app.use(middleware);
             // @ts-ignore
-            this.routerModule = import('express').then(({ Router }) => Router);
+            this.routerModule = await import('express').then(({ Router }) => Router);
             this.injectRouter = (path, router) => this.app.use(path, router.native);
-            this.createRouter = async () => new UniversalAdapter((await this.routerModule)(), this.framework);
+            this.createRouter = async () => {
+                const router = new UniversalAdapter(this.routerModule(), this.type);
+                await router.initializeAdapters();
+                await router.bindMethods();
+                return router;
+            }
         }
 
-        if (this.framework === 'fastify') {
+        if (this.type === 'fastify') {
             this.resDigest = (res: IFastifyResponse) => {
                 const response: IFrameworkResponse = {
                     set: (key, value) => { res.header(key, value); return response; },
@@ -129,12 +135,17 @@ export class UniversalAdapter {
             this.use = (path, ...handlers) => (typeof path === 'string' ? handlers : [path, ...handlers]).forEach(handler => this.app.addHook('onRequest', handleHandler(handler)));
             this.useNative = (plugin, options) => this.app.register(plugin, options);
             // @ts-ignore
-            this.routerModule = import('fastify').then(({ fastify }) => fastify);
+            this.routerModule = await import('fastify').then(({ fastify }) => fastify);
             this.injectRouter = (path, router) => this.app.register(router.native, { prefix: path });
-            this.createRouter = async () => new UniversalAdapter((await this.routerModule)(), this.framework);
+            this.createRouter = async () => {
+                const router = new UniversalAdapter(this.routerModule(), this.type);
+                await router.initializeAdapters();
+                await router.bindMethods();
+                return router;
+            }
         }
 
-        if (this.framework === 'koa') {
+        if (this.type === 'koa') {
             this.resDigest = (res: IKoaResponse) => {
                 const response: IFrameworkResponse = {
                     cookie: (key, value) => { res.cookies.set(key, value); return response; },
@@ -151,12 +162,17 @@ export class UniversalAdapter {
             this.use = (path, ...handlers) => (typeof path === 'string' ? handlers : [path, ...handlers]).forEach(handler => this.app.use(handleHandler(handler)));
             this.useNative = (middleware) => this.app.use(middleware);
             // @ts-ignore
-            this.routerModule = import('@koa/router').then(({ Router }) => Router);
+            this.routerModule = await import('@koa/router').then(({ Router }) => Router);
             this.injectRouter = (_, router) => this.app.use(router.native.routes());
-            this.createRouter = async (path) => new UniversalAdapter(new (await this.routerModule)({ prefix: path }), this.framework);
+            this.createRouter = async (path) => {
+                const router = new UniversalAdapter(new this.routerModule({ prefix: path }), this.type);
+                await router.initializeAdapters();
+                await router.bindMethods();
+                return router;
+            }
         }
 
-        if (this.framework === 'hono') {
+        if (this.type === 'hono') {
             this.reqDigest = async (req: IHonoRequest) => ({ headers: req.header(), query: req.query(), params: req.param(), body: await req.parseBody().catch(() => ({})) });
             this.resDigest = (res: any) => {
                 const response: IFrameworkResponse = {
@@ -182,12 +198,17 @@ export class UniversalAdapter {
             };
             this.useNative = (middleware) => this.app.use('*', middleware);
             // @ts-ignore
-            this.routerModule = import('hono').then(({ Hono }) => Hono);
+            this.routerModule = await import('hono').then(({ Hono }) => Hono);
             this.injectRouter = (path, router) => this.app.route(path, router.native);
-            this.createRouter = async () => new UniversalAdapter(new (await this.routerModule)(), this.framework);
+            this.createRouter = async () => {
+                const router = new UniversalAdapter(new this.routerModule(), this.type);
+                await router.initializeAdapters();
+                await router.bindMethods();
+                return router;
+            }
         }
 
-        if (this.framework === 'elysia') {
+        if (this.type === 'elysia') {
             this.resDigest = (res: IElysiaResponse) => {
                 const response: IFrameworkResponse = {
                     cookie: (key, value) => {
@@ -208,9 +229,14 @@ export class UniversalAdapter {
             this.use = (path, ...handlers) => (typeof path === 'string' ? handlers : [path, ...handlers]).forEach(handler => this.app.onBeforeHandle(handleHandler(handler)));
             this.useNative = (middleware) => this.app.use(middleware);
             // @ts-ignore
-            this.routerModule = import('elysia').then(({ Elysia }) => Elysia);
+            this.routerModule = await import('elysia').then(({ Elysia }) => Elysia);
             this.injectRouter = (_, router) => this.app.use(router.native);
-            this.createRouter = async (path) => new UniversalAdapter(new (await this.routerModule)({ prefix: path }), this.framework);
+            this.createRouter = async (path) => {
+                const router = new UniversalAdapter(new this.routerModule({ prefix: path }), this.type);
+                await router.initializeAdapters();
+                await router.bindMethods();
+                return router;
+            }
         }
     }
 
@@ -223,60 +249,60 @@ export class UniversalAdapter {
             if (typeof this[method] === 'function') this[method] = (this[method] as Function).bind(this);
     }
 
-    public async listen(port: number, callback?: () => void): Promise<void> {
-        if (this.framework === 'hono') {
+    public async listen(port: number, cb?: () => void): Promise<void> {
+        if (this.type === 'hono') {
             // @ts-ignore
             if (typeof Bun !== 'undefined') Bun.serve({ fetch: this.app.fetch.bind(this.app), port });
             // @ts-ignore
-            else (await import('@hono/node-server')).serve({ fetch: this.app.fetch, port }, callback);
+            else (await import('@hono/node-server')).serve({ fetch: this.app.fetch, port }, cb);
         }
-        if (this.framework === 'elysia') {
+        if (this.type === 'elysia') {
             // @ts-ignore
             if (typeof Bun !== 'undefined') this.app.listen(port);
             // @ts-ignore
-            else (await import('@elysiajs/node')).default(this.app).listen(port, callback);
+            else (await import('@elysiajs/node')).default(this.app).listen(port, cb);
         }
-        if (this.framework === 'fastify') this.app.listen({ port }, callback);
+        if (this.type === 'fastify') this.app.listen({ port }, cb);
         // Express, Koa
-        if (this.framework === 'express' || this.framework === 'koa') this.app.listen(port, callback);
+        if (this.type === 'express' || this.type === 'koa') this.app.listen(port, cb);
     }
 
     public async setupMiddleware() {
         // Static Files
         const staticDir = join(__dirname, '../../public');
-        if (this.framework === 'express') {
+        if (this.type === 'express') {
             const express = (await import('express')).default;
             // @ts-ignore
             this.useNative(express.static(staticDir));
         }
-        if (this.framework === 'koa') {
+        if (this.type === 'koa') {
             // @ts-ignore
             const koaStatic = await import('koa-static');
             // @ts-ignore
             this.useNative((koaStatic.default || koaStatic)(staticDir));
         }
-        if (this.framework === 'fastify') {
+        if (this.type === 'fastify') {
             // @ts-ignore
             this.useNative((await import('@fastify/static')).default, { root: staticDir });
         }
-        if (this.framework === 'hono') {
+        if (this.type === 'hono') {
             // @ts-ignore
             const serveStatic = typeof Bun !== 'undefined' ? (await import('hono/bun')).serveStatic : (await import('@hono/node-server/serve-static')).serveStatic;
             this.useNative('/*', serveStatic({ root: staticDir }));
         }
 
-        console.log(`[BEnder] Framework: ${this.framework} - Static folder ready 🟢`);
+        console.log(`[BEnder] Framework: ${this.type} - Static folder ready 🟢`);
 
         // Parsers
-        if (this.framework === 'express') {
+        if (this.type === 'express') {
             // @ts-ignore
             const express = (await import('express')).default;
             this.useNative(express.json());
             this.useNative(express.urlencoded({ extended: true }));
         }
         // @ts-ignore
-        if (this.framework === 'koa') this.useNative((await import('koa-bodyparser') as any).default());
-        console.log(`[BEnder] Framework: ${this.framework} - Parsers ready 🟢`);
+        if (this.type === 'koa') this.useNative((await import('koa-bodyparser') as any).default());
+        console.log(`[BEnder] Framework: ${this.type} - Parsers ready 🟢`);
         // Fastify has built-in body parsing
         // Hono/Elysia have built-in body parsing
 
@@ -291,75 +317,75 @@ export class UniversalAdapter {
     private async addCors() {
         try {
             // @ts-ignore
-            if (this.framework === 'express') this.useNative((await import('cors')).default(appConfig.security.cors));
+            if (this.type === 'express') this.useNative((await import('cors')).default(appConfig.security.cors));
             // @ts-ignore
-            if (this.framework === 'koa') this.useNative((await import('@koa/cors')).default(appConfig.security.cors));
+            if (this.type === 'koa') this.useNative((await import('@koa/cors')).default(appConfig.security.cors));
             // @ts-ignore
-            if (this.framework === 'fastify') this.useNative((await import('@fastify/cors')).default, appConfig.security.cors);
+            if (this.type === 'fastify') this.useNative((await import('@fastify/cors')).default, appConfig.security.cors);
             // @ts-ignore
-            if (this.framework === 'hono') this.useNative((await import('hono/cors')).cors(appConfig.security.cors));
+            if (this.type === 'hono') this.useNative((await import('hono/cors')).cors(appConfig.security.cors));
             // @ts-ignore
-            if (this.framework === 'elysia') this.useNative((await import('@elysiajs/cors')).cors(appConfig.security.cors));
+            if (this.type === 'elysia') this.useNative((await import('@elysiajs/cors')).cors(appConfig.security.cors));
         } catch (e) { console.warn('CORS install failed', e); }
-        console.log(`[BEnder] Framework: ${this.framework} - CORS ready 🟢`);
+        console.log(`[BEnder] Framework: ${this.type} - CORS ready 🟢`);
     }
 
     private async addHelmet() {
         try {
             // @ts-ignore
-            if (this.framework === 'express') this.useNative((await import('helmet')).default(appConfig.security.helmet));
+            if (this.type === 'express') this.useNative((await import('helmet')).default(appConfig.security.helmet));
             // @ts-ignore
-            if (this.framework === 'koa') this.useNative((await import('koa-helmet')).default(appConfig.security.helmet));
+            if (this.type === 'koa') this.useNative((await import('koa-helmet')).default(appConfig.security.helmet));
             // @ts-ignore
-            if (this.framework === 'fastify') this.useNative((await import('@fastify/helmet')).default, appConfig.security.helmet);
+            if (this.type === 'fastify') this.useNative((await import('@fastify/helmet')).default, appConfig.security.helmet);
             // @ts-ignore
-            if (this.framework === 'hono') this.useNative((await import('hono/secure-headers')).secureHeaders(appConfig.security.helmet));
+            if (this.type === 'hono') this.useNative((await import('hono/secure-headers')).secureHeaders(appConfig.security.helmet));
             // @ts-ignore
-            if (this.framework === 'elysia') this.useNative((await import('@elysiajs/html')).html()); // Note: elysiajs/html is not exactly helmet
+            if (this.type === 'elysia') this.useNative((await import('@elysiajs/html')).html()); // Note: elysiajs/html is not exactly helmet
         } catch (e) { console.warn('Helmet install failed', e); }
-        console.log(`[BEnder] Framework: ${this.framework} - Helmet security ready 🟢`);
+        console.log(`[BEnder] Framework: ${this.type} - Helmet security ready 🟢`);
     }
 
     private async addRateLimit() {
         try {
             // @ts-ignore
-            if (this.framework === 'express') this.useNative((await import('express-rate-limit')).default(appConfig.security.rateLimit));
+            if (this.type === 'express') this.useNative((await import('express-rate-limit')).default(appConfig.security.rateLimit));
             // @ts-ignore
-            if (this.framework === 'koa') this.useNative((await import('koa-ratelimit')).default({ driver: 'memory', db: new Map(), ...appConfig.security.rateLimit }));
+            if (this.type === 'koa') this.useNative((await import('koa-ratelimit')).default({ driver: 'memory', db: new Map(), ...appConfig.security.rateLimit }));
             // @ts-ignore
-            if (this.framework === 'fastify') this.useNative((await import('@fastify/rate-limit')).default, appConfig.security.rateLimit);
+            if (this.type === 'fastify') this.useNative((await import('@fastify/rate-limit')).default, appConfig.security.rateLimit);
             // @ts-ignore
-            if (this.framework === 'hono') this.useNative((await import('hono-rate-limiter')).rateLimiter(appConfig.security.rateLimit));
+            if (this.type === 'hono') this.useNative((await import('hono-rate-limiter')).rateLimiter(appConfig.security.rateLimit));
             // Elysia limit?
         } catch (e) { console.warn('RateLimit install failed', e); }
-        console.log(`[BEnder] Framework: ${this.framework} - Rate limiting ready 🟢`);
+        console.log(`[BEnder] Framework: ${this.type} - Rate limiting ready 🟢`);
     }
 
     private async addMorgan() {
         try {
             // @ts-ignore
-            if (this.framework === 'express') this.useNative((await import('morgan')).default('dev'));
+            if (this.type === 'express') this.useNative((await import('morgan')).default('dev'));
             // @ts-ignore
-            if (this.framework === 'koa') this.useNative((await import('koa-morgan')).default('dev'));
+            if (this.type === 'koa') this.useNative((await import('koa-morgan')).default('dev'));
             // Fastify has built-in logger, defaulting to dev
             // @ts-ignore
-            if (this.framework === 'hono') this.useNative((await import('hono/logger')).logger());
+            if (this.type === 'hono') this.useNative((await import('hono/logger')).logger());
             // @ts-ignore
-            if (this.framework === 'elysia') this.useNative((await import('@elysiajs/logger')).logger());
+            if (this.type === 'elysia') this.useNative((await import('@elysiajs/logger')).logger());
         } catch (e) { console.warn('Morgan install failed', e); }
-        console.log(`[BEnder] Framework: ${this.framework} - Logging ready 🟢`);
+        console.log(`[BEnder] Framework: ${this.type} - Logging ready 🟢`);
     }
 
     private async addCookieParser() {
         try {
             // @ts-ignore
-            if (this.framework === 'express') this.useNative((await import('cookie-parser')).default());
+            if (this.type === 'express') this.useNative((await import('cookie-parser')).default());
             // Fastify: @fastify/cookie
             // @ts-ignore
-            if (this.framework === 'fastify') this.useNative((await import('@fastify/cookie')).default);
+            if (this.type === 'fastify') this.useNative((await import('@fastify/cookie')).default);
             // Koa has built-in or uses koa-body
             // Hono has built-in usually?
         } catch (e) { console.warn('CookieParser install failed', e); }
-        console.log(`[BEnder] Framework: ${this.framework} - Cookie parser ready 🟢`);
+        console.log(`[BEnder] Framework: ${this.type} - Cookie parser ready 🟢`);
     }
 }
