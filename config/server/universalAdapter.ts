@@ -75,13 +75,12 @@ export class UniversalAdapter {
 
     public reqDigest: (req: any) => Promise<IFrameworkRequest> = async (req: IFrameworkRequest) => req;
     public resDigest: (res: any) => IFrameworkResponse = (res: IFrameworkResponse) => res;
-    public use: (path: string | IHandler, ...handlers: IHandler[]) => void = () => null;
-    public injectRouter: (path: string, router: any) => void = () => null;
-    public createRouter: (path?: string) => Promise<any> = async () => this;
+    public use: (path: string | typeof this.routerModule, ...handlers: typeof this.routerModule[]) => void = () => null;
+    public createRouter: (path?: string) => typeof this.routerModule = () => this.routerModule();
 
     // Core references
     private routerModule: any | null = null;
-    private routingMethods: HttpMethod[] = ['get', 'post', 'put', 'delete', 'patch', 'head', 'options'];
+    private routingMethods: HttpMethod[] = ['get', 'post', 'put', 'delete', 'patch', 'options'];
 
     // Native middleware registration
     public useNative: (middleware: any, options?: any) => void = () => null;
@@ -92,6 +91,11 @@ export class UniversalAdapter {
     }
 
     private async initializeAdapters() {
+        // 0. Define handler
+        let handleHandler = (handler: IHandler | AsyncHeader): ((...args: any[]) => void) => async (req: IFrameworkRequest, res: any, next?: () => Promise<any>) => {
+            return handler(await this.reqDigest(req), this.resDigest(res), next);
+        };
+
         // 1. Default bindings (Generic for apps with .get/.post)
         for (const method of this.routingMethods)
             this[method] = (path: string, ...handlers: IHandler[]) => {
@@ -99,18 +103,16 @@ export class UniversalAdapter {
                 return this;
             }
 
-        let handleHandler = (handler: IHandler | AsyncHeader): ((...args: any[]) => void) => async (req: IFrameworkRequest, res: any, next?: () => Promise<any>) => {
-            return handler(await this.reqDigest(req), this.resDigest(res), next);
-        };
-
         if (this.type === 'express') {
             this.resDigest = (res: IExpressResponse) => res;
-            this.use = (path, ...handlers) => handlers.forEach(handler => this.app.use(path, handleHandler(handler)));
+            this.use = (path, ...handlers) => {
+                typeof path === 'string'
+                    ? handlers.forEach(handler => this.app.use(path, handleHandler(handler)))
+                    : [path, ...handlers].forEach(handler => this.app.use(handleHandler(handler)));
+            }
             this.useNative = (middleware) => this.app.use(middleware);
             // @ts-ignore
             this.routerModule = await import('express').then(({ Router }) => Router);
-            this.injectRouter = (path, router) => this.app.use(path, router.native);
-            this.createRouter = async () => this.routerModule();
         }
 
         if (this.type === 'fastify') {
@@ -127,17 +129,14 @@ export class UniversalAdapter {
             handleHandler = (handler: IHandler | AsyncHeader) => async (req: IFrameworkRequest, res: IFastifyResponse) => {
                 return handler(await this.reqDigest(req), this.resDigest(res));
             };
-            this.use = (path, ...handlers) => (typeof path === 'string' ? handlers : [path, ...handlers]).forEach(handler => this.app.addHook('onRequest', handleHandler(handler)));
+            this.use = (path, ...handlers) => {
+                typeof path === 'string'
+                    ? handlers.forEach(handler => this.app.register(handleHandler(handler), { prefix: path }))
+                    : [path, ...handlers].forEach(handler => this.app.addHook('onRequest', handleHandler(handler)));
+            }
             this.useNative = (plugin, options) => this.app.register(plugin, options);
             // @ts-ignore
             this.routerModule = await import('fastify').then(({ fastify }) => fastify);
-            this.injectRouter = (path, router) => this.app.register(router.native, { prefix: path });
-            this.createRouter = async () => {
-                const router = new UniversalAdapter(this.routerModule(), this.type);
-                await router.initializeAdapters();
-                await router.bindMethods();
-                return router;
-            }
         }
 
         if (this.type === 'koa') {
@@ -154,17 +153,15 @@ export class UniversalAdapter {
             handleHandler = (handler: IHandler | AsyncHeader) => async (ctx: { request: IFrameworkRequest, response: IKoaResponse }, next: () => Promise<any>) => {
                 return handler(await this.reqDigest(ctx.request), this.resDigest(ctx.response), next);
             };
-            this.use = (path, ...handlers) => (typeof path === 'string' ? handlers : [path, ...handlers]).forEach(handler => this.app.use(handleHandler(handler)));
+            this.use = (path, ...handlers) => {
+                typeof path === 'string'
+                    ? handlers.forEach(handler => this.app.use(handleHandler(handler)))
+                    : [path, ...handlers].forEach(handler => this.app.use(handleHandler(handler)));
+            }
             this.useNative = (middleware) => this.app.use(middleware);
             // @ts-ignore
             this.routerModule = await import('@koa/router').then(({ Router }) => Router);
-            this.injectRouter = (_, router) => this.app.use(router.native.routes());
-            this.createRouter = async (path) => {
-                const router = new UniversalAdapter(new this.routerModule({ prefix: path }), this.type);
-                await router.initializeAdapters();
-                await router.bindMethods();
-                return router;
-            }
+            this.createRouter = (path) => new this.routerModule({ prefix: path });
         }
 
         if (this.type === 'hono') {
@@ -188,19 +185,13 @@ export class UniversalAdapter {
             };
             this.use = (path, ...handlers) => {
                 typeof path === 'string'
-                    ? handlers.forEach(handler => this.app.use(path, handleHandler(handler)))
+                    ? handlers.forEach(handler => this.app[handler instanceof this.routerModule ? 'route' : 'use'](path, handleHandler(handler)))
                     : [path, ...handlers].forEach(handler => this.app.use("*", handleHandler(handler)));
             };
             this.useNative = (middleware) => this.app.use('*', middleware);
             // @ts-ignore
             this.routerModule = await import('hono').then(({ Hono }) => Hono);
-            this.injectRouter = (path, router) => this.app.route(path, router.native);
-            this.createRouter = async () => {
-                const router = new UniversalAdapter(new this.routerModule(), this.type);
-                await router.initializeAdapters();
-                await router.bindMethods();
-                return router;
-            }
+            this.createRouter = () => new this.routerModule();
         }
 
         if (this.type === 'elysia') {
@@ -221,24 +212,21 @@ export class UniversalAdapter {
             handleHandler = (handler: IHandler | AsyncHeader) => async (ctx: IFrameworkRequest & IElysiaResponse) => {
                 return handler(await this.reqDigest(ctx), this.resDigest(ctx));
             };
-            this.use = (path, ...handlers) => (typeof path === 'string' ? handlers : [path, ...handlers]).forEach(handler => this.app.onBeforeHandle(handleHandler(handler)));
+            this.use = (path, ...handlers) => {
+                typeof path === 'string'
+                    ? handlers.forEach(handler => this.app.use(path, handleHandler(handler)))
+                    : [path, ...handlers].forEach(handler => this.app.use(handleHandler(handler)));
+            }
             this.useNative = (middleware) => this.app.use(middleware);
             // @ts-ignore
             this.routerModule = await import('elysia').then(({ Elysia }) => Elysia);
-            this.injectRouter = (_, router) => this.app.use(router.native);
-            this.createRouter = async (path) => {
-                const router = new UniversalAdapter(new this.routerModule({ prefix: path }), this.type);
-                await router.initializeAdapters();
-                await router.bindMethods();
-                return router;
-            }
+            this.createRouter = (path) => new this.routerModule({ prefix: path });
         }
     }
 
     public bindMethods() {
         // Ensure all methods are bound to this instance
         this.use = this.use.bind(this);
-        this.injectRouter = this.injectRouter.bind(this);
         this.createRouter = this.createRouter.bind(this);
         for (const method of this.routingMethods)
             if (typeof this[method] === 'function') this[method] = (this[method] as Function).bind(this);
