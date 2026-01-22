@@ -61,10 +61,10 @@ bun add hono hono-rate-limiter
 *(Note: To run Elysia on Node.js, install `@elysiajs/node`)*
 ```bash
 *(Node)*
-npm install elysia @elysiajs/static @elysiajs/cors @elysiajs/cookie @elysiajs/html @elysiajs/logger @elysiajs/limit @elysiajs/node
+npm install elysia @elysiajs/static @elysiajs/cors @elysiajs/cookie @elysiajs/html @elysiajs/node @grotto/logysia
 
 *(Bun)*
-bun add elysia @elysiajs/static @elysiajs/cors @elysiajs/cookie @elysiajs/html @elysiajs/logger @elysiajs/limit
+bun add elysia @elysiajs/static @elysiajs/cors @elysiajs/cookie @elysiajs/html
 ```
 
 ### 3. Run the Server
