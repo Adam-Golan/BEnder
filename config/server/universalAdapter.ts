@@ -38,7 +38,7 @@ export class UniversalAdapter {
                 break;
             case 'fastify':
                 // @ts-ignore
-                app = (await import('fastify')).default({ exposeHeadRoutes: false, logger: true });
+                app = (await import('fastify')).default({ logger: true });
                 break;
             case 'koa':
                 // @ts-ignore
@@ -76,11 +76,11 @@ export class UniversalAdapter {
     public reqDigest: (req: any) => Promise<IFrameworkRequest> = async (req: IFrameworkRequest) => req;
     public resDigest: (res: any) => IFrameworkResponse = (res: IFrameworkResponse) => res;
     public use: (path: string | typeof this.routerModule, ...handlers: typeof this.routerModule[]) => void = () => null;
-    public createRouter: (path?: string) => typeof this.routerModule = () => this.routerModule();
+    public createRouter: (path?: string) => UniversalAdapter | typeof this.routerModule = () => this.routerModule();
 
     // Core references
     private routerModule: any | null = null;
-    private routingMethods: HttpMethod[] = ['get', 'post', 'put', 'delete', 'patch', 'options'];
+    private routingMethods: HttpMethod[] = ['get', 'post', 'put', 'delete', 'patch', 'options', 'head'];
 
     // Native middleware registration
     public useNative: (middleware: any, options?: any) => void = () => null;
@@ -92,9 +92,9 @@ export class UniversalAdapter {
 
     private async initializeAdapters() {
         // 0. Define handler
-        let handleHandler = (handler: IHandler | AsyncHeader): ((...args: any[]) => void) => async (req: IFrameworkRequest, res: any, next?: () => Promise<any>) => {
-            return handler(await this.reqDigest(req), this.resDigest(res), next);
-        };
+        let handleHandler = (handler: IHandler | AsyncHeader): ((...args: any[]) => void) =>
+            async (req: IFrameworkRequest, res: any, next?: () => Promise<any>) =>
+                handler(await this.reqDigest(req), this.resDigest(res), next);
 
         // 1. Default bindings (Generic for apps with .get/.post)
         for (const method of this.routingMethods)
@@ -103,6 +103,7 @@ export class UniversalAdapter {
                 return this;
             }
 
+        // READY
         if (this.type === 'express') {
             this.resDigest = (res: IExpressResponse) => res;
             this.use = (path, ...handlers) => {
@@ -112,7 +113,7 @@ export class UniversalAdapter {
             }
             this.useNative = (middleware) => this.app.use(middleware);
             // @ts-ignore
-            this.routerModule = await import('express').then(({ Router }) => Router);
+            this.routerModule = (await import('express')).Router;
         }
 
         if (this.type === 'fastify') {
@@ -132,11 +133,17 @@ export class UniversalAdapter {
             this.use = (path, ...handlers) => {
                 typeof path === 'string'
                     ? handlers.forEach(handler => this.app.register(handleHandler(handler), { prefix: path }))
-                    : [path, ...handlers].forEach(handler => this.app.addHook('onRequest', handleHandler(handler)));
+                    : [path, ...handlers].forEach(handler => this.app.register(handleHandler(handler)));
             }
             this.useNative = (plugin, options) => this.app.register(plugin, options);
             // @ts-ignore
-            this.routerModule = await import('fastify').then(({ fastify }) => fastify);
+            this.routerModule = (await import('fastify')).default;
+            this.createRouter = async () => {
+                const router = new UniversalAdapter(this.routerModule(), this.type);
+                await router.initializeAdapters();
+                await router.bindMethods();
+                return router;
+            }
         }
 
         if (this.type === 'koa') {
@@ -160,7 +167,7 @@ export class UniversalAdapter {
             }
             this.useNative = (middleware) => this.app.use(middleware);
             // @ts-ignore
-            this.routerModule = await import('@koa/router').then(({ Router }) => Router);
+            this.routerModule = (await import('@koa/router')).Router;
             this.createRouter = (path) => new this.routerModule({ prefix: path });
         }
 
@@ -214,13 +221,18 @@ export class UniversalAdapter {
             };
             this.use = (path, ...handlers) => {
                 typeof path === 'string'
-                    ? handlers.forEach(handler => this.app.use(path, handleHandler(handler)))
+                    ? handlers.forEach(handler => this.app.use(new this.routerModule({ prefix: path }).use(handler)))
                     : [path, ...handlers].forEach(handler => this.app.use(handleHandler(handler)));
             }
             this.useNative = (middleware) => this.app.use(middleware);
             // @ts-ignore
-            this.routerModule = await import('elysia').then(({ Elysia }) => Elysia);
-            this.createRouter = (path) => new this.routerModule({ prefix: path });
+            this.routerModule = (await import('elysia')).Elysia;
+            this.createRouter = async (path) => {
+                const router = new UniversalAdapter(new this.routerModule({ prefix: path }), this.type);
+                await router.initializeAdapters();
+                await router.bindMethods();
+                return router;
+            }
         }
     }
 
@@ -355,7 +367,7 @@ export class UniversalAdapter {
             // @ts-ignore
             if (this.type === 'hono') this.useNative((await import('hono/logger')).logger());
             // @ts-ignore
-            if (this.type === 'elysia') this.useNative((await import('@elysiajs/logger')).logger());
+            if (this.type === 'elysia') this.useNative((await import('@rasla/logify')).logger());
         } catch (e) { console.warn('Morgan install failed', e); }
         console.log(`[BEnder] Framework: ${this.type} - Logging ready 🟢`);
     }
