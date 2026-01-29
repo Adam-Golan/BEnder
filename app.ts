@@ -2,8 +2,14 @@ import { IRequest, IResponse } from "./config/server/types";
 import { initInfrastructure, framework } from './config/infrastructure';
 import keys from './config/keys';
 import { DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT } from './methods';
+import { readFile } from 'node:fs/promises';
+import { join, extname } from 'node:path';
+import { existsSync } from 'node:fs';
 
 (async () => {
+    const filePath = join(process.cwd(), 'public', 'index.html');
+    const file = await readFile(filePath);
+    
     // 1. Initialize Infrastructure (Framework + DB + Global Middleware)
     await initInfrastructure();
 
@@ -30,7 +36,24 @@ import { DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT } from './methods';
         .patch(wildcard, patch.router)
         .delete(wildcard, del.router)
         .options(wildcard, options.router)
-        .use((_: IRequest, res: IResponse) => { res.status(404).json({ message: 'Route not found' }) });
+        .use(async (_: IRequest, res: IResponse, next: () => Promise<void>) => {
+            // Check if the requested URL actually exists as a file (e.g., /main.js)
+            if (extname(filePath) && existsSync(filePath)) {
+                // Set MIME type based on extension (simple version)
+                const mimeTypes: Record<string, string> = {
+                    '.js': 'application/javascript',
+                    '.css': 'text/css',
+                    '.json': 'application/json',
+                    '.png': 'image/png',
+                    '.html': 'text/html',
+                };
+                res.setHeader('Content-Type', mimeTypes[extname(filePath)] || 'text/plain');
+                return res.send(file);
+            }
+
+            // If it's not a file, move to the next middleware (the fallback)
+            next();
+        });
 
     // 4. Start Listening
     framework.listen(keys.env.port, () => console.log(`Server is running on port ${keys.env.port}`));

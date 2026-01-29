@@ -23,6 +23,7 @@ export interface IResponse<TData = any> {
     json(data: TData): this;
     send(data: string | Buffer): this;
     type(type: string): this;
+    setHeader(key: string, value: string): void;
 }
 
 import { UniversalAdapter } from '../universalAdapter';
